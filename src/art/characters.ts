@@ -66,12 +66,6 @@ export function drawBee(ctx: CanvasRenderingContext2D, o: BeeOpts): void {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  // soft ground-less shadow (cheap, no blur)
-  ctx.fillStyle = 'rgba(80,60,120,0.07)';
-  ctx.beginPath();
-  ctx.ellipse(0.05, 1.22 - bob / R * 0.3, 0.7, 0.1, 0, 0, TAU);
-  ctx.fill();
-
   // ---- wings (behind body)
   const flap = mood === 'sleepy' ? Math.sin(t * 9) * 0.12 : Math.sin(t * 52);
   const wingAmp = mood === 'sleepy' ? 0.5 : 1;

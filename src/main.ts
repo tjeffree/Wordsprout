@@ -111,7 +111,13 @@ function frame(now: number) {
     if (active) renderer.handle(evs, attract.round);
   }
   const day = screen === 'play' || screen === 'results' ? (round?.day ?? 0) : 0.18;
+  renderer.interactive = screen === 'title';
+  // Keep the sun's face visible beside the title logo rather than behind it.
+  const logoStart = screen === 'title' ? current?.querySelector('.logo > span') : null;
+  renderer.setSunClearOf(logoStart ? logoStart.getBoundingClientRect().left : null);
   renderer.render(paused ? 0 : dt, active, { day, combo: active?.stats.combo ?? 0 });
+  const cursor = renderer.hot ? 'pointer' : '';
+  if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor;
   const P = (window as any).__prof;
   if (P) { const d = performance.now() - fStart; (P.hist ??= [0, 0, 0, 0])[d < 4 ? 0 : d < 6 ? 1 : d < 8 ? 2 : 3]++; }
   requestAnimationFrame(frame);
@@ -194,6 +200,28 @@ canvas.addEventListener('pointerdown', () => {
   if (screen === 'play') focusTyping();
 });
 window.addEventListener('pointerdown', () => sound.unlock(), { capture: true });
+
+// Title-screen play-along: the scene reacts to the pointer (see Renderer).
+const scenePoint = (e: PointerEvent) => {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+};
+window.addEventListener('pointermove', (e) => { const p = scenePoint(e); renderer.pointerMove(p.x, p.y); });
+window.addEventListener('pointerdown', (e) => {
+  if ((e.target as HTMLElement | null)?.closest?.('button, input, a, .card')) return;
+  const p = scenePoint(e);
+  renderer.poke(p.x, p.y);
+});
+const pointerGone = (e: PointerEvent) => { if (e.pointerType !== 'mouse') renderer.pointerLeave(); };
+window.addEventListener('pointerup', pointerGone);
+window.addEventListener('pointercancel', () => renderer.pointerLeave());
+document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) renderer.pointerLeave(); }); // left the window
+renderer.onFun = (what) => {
+  if (what === 'bee') sound.buzz();
+  else if (what === 'sun') sound.sunHello();
+  else if (what === 'giggle') sound.giggle();
+  else sound.rainbow();
+};
 
 function focusTyping() {
   typeInput.focus({ preventScroll: true });

@@ -446,6 +446,39 @@ export class Sound {
     });
   }
 
+  /** Bumble notices you: a happy little buzz-up. */
+  buzz(): void {
+    this.run((_c, now) => {
+      this.glide(392, 587, now, 0.12, 0.12, 0.2);
+      this.glide(523, 880, now + 0.1, 0.16, 0.1, 0.3);
+    });
+  }
+
+  /** The sun wakes up and says good morning. */
+  sunHello(): void {
+    this.run((_c, now) => {
+      this.note(mtof(67), now, { gain: 0.12, dur: 0.6, bright: 0.2, type: 'sine', send: 0.6, attack: 0.05 });
+      this.note(mtof(74), now + 0.16, { gain: 0.12, dur: 0.6, bright: 0.2, type: 'sine', send: 0.6, attack: 0.05 });
+      this.note(mtof(79), now + 0.32, { gain: 0.1, dur: 0.9, bright: 0.4, type: 'sine', send: 0.7, attack: 0.05 });
+    });
+  }
+
+  /** A tickled cloud giggles. */
+  giggle(): void {
+    this.run((_c, now) => {
+      [84, 81, 86, 83].forEach((m, k) => this.glide(mtof(m), mtof(m - 2), now + k * 0.07, 0.07, 0.07, 0.3));
+    });
+  }
+
+  /** The rainbow paints itself across the sky. */
+  rainbow(): void {
+    this.run((_c, now) => {
+      for (let k = 0; k < 7; k++) {
+        this.note(mtof(scaleNote(7 + k, 60)), now + k * 0.08, { gain: 0.1, dur: 0.8, bright: 0.8, send: 0.8, pan: (k / 3 - 1) * 0.6 });
+      }
+    });
+  }
+
   roundStart(): void {
     this.run((_c, now) => {
       this.note(mtof(67), now, { gain: 0.29, dur: 0.5, bright: 0.4, send: 0.5 });
