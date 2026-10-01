@@ -1,0 +1,45 @@
+{
+  "voice": "en-GB-SoniaNeural",
+  "words": [
+    {
+      "word": "badge",
+      "sentence": "I got a shiny badge for swimming."
+    },
+    {
+      "word": "edge",
+      "sentence": "Don't stand too close to the edge."
+    },
+    {
+      "word": "bridge",
+      "sentence": "We walked over the bridge."
+    },
+    {
+      "word": "dodge",
+      "sentence": "Can you dodge the ball?"
+    },
+    {
+      "word": "fudge",
+      "sentence": "Grandma made some yummy fudge."
+    },
+    {
+      "word": "age",
+      "sentence": "What age are you?"
+    },
+    {
+      "word": "huge",
+      "sentence": "The elephant is huge."
+    },
+    {
+      "word": "change",
+      "sentence": "Let's change into our pyjamas."
+    },
+    {
+      "word": "charge",
+      "sentence": "The tablet needs to charge."
+    },
+    {
+      "word": "village",
+      "sentence": "We live in a little village."
+    }
+  ]
+}

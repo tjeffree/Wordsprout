@@ -1,0 +1,15 @@
+# This week's spelling words, for the Spelling Bee game.
+# One per line:  word | a short sentence that uses it (the sentence is optional)
+# Then run:  npm run spelling   (needs Python with edge-tts: pip install edge-tts)
+# Full steps: README.md, "A new spelling list each week".
+
+badge | I got a shiny badge for swimming.
+edge | Don't stand too close to the edge.
+bridge | We walked over the bridge.
+dodge | Can you dodge the ball?
+fudge | Grandma made some yummy fudge.
+age | What age are you?
+huge | The elephant is huge.
+change | Let's change into our pyjamas.
+charge | The tablet needs to charge.
+village | We live in a little village.
