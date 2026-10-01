@@ -167,8 +167,9 @@ kbd { font: 600 0.85em var(--font); background: #fff; border-radius: 8px; paddin
 .who .meta b { font-size: 24px; display: block; }
 .who .meta span { color: var(--ink-soft); font-size: 15px; }
 .modes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+.modes:has(> .mode:nth-child(6)) { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 900px) { .modes { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 560px) { .modes { grid-template-columns: repeat(2, 1fr); } .mode:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .modes, .modes:has(> .mode:nth-child(6)) { grid-template-columns: repeat(2, 1fr); } .mode:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 .mode {
   font: inherit; color: var(--ink); border: 3px solid transparent; cursor: pointer; text-align: center;
   background: #fff4e3; border-radius: 24px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -278,6 +279,13 @@ kbd { font: 600 0.85em var(--font); background: #fff; border-radius: 8px; paddin
 .badge.mint { background: #e2f8f0; }
 .badge.butter { background: #fff1c2; }
 .badge canvas { width: 26px; height: 32px; }
+
+/* Spelling Bee results: the week's words */
+.spelling-report { margin-bottom: 18px; }
+.spell-words { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 6px; }
+.spell-word { background: #fff4e3; border-radius: 999px; padding: 6px 13px; font-weight: 700; font-size: 17px; }
+.spell-word.easy { background: #d2f5e9; }
+.spelling-report .keytip { margin-top: 4px; }
 .keytip { text-align: center; font-size: 14px; color: var(--ink-soft); margin-top: 14px; }
 
 /* -------------------------------------------------------- leaderboard -- */

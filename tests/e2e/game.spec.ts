@@ -79,6 +79,26 @@ test('a little learner grows ten flowers and lands on the leaderboard', async ({
   expect(errors).toEqual([]);
 });
 
+test('Spelling Bee reads each word aloud and lists the words at the end', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = watchErrors(page);
+  const clips: string[] = [];
+  page.on('response', (r) => { if (r.url().includes('/spelling/') && r.ok()) clips.push(r.url()); });
+  await fresh(page);
+  await newGardener(page, 'Nova', 'sprout');
+  await page.locator('.mode[data-id="spelling"]').click();
+  await page.getByRole('button', { name: /^Start/ }).click();
+  await expect(page.locator('.hud')).toContainText(/0 of \d+ words/);
+  await expect.poll(() => page.evaluate(() => !!window.__game.round.puffs.find((p: any) => p.hidden))).toBe(true);
+  await expect.poll(() => clips.length).toBeGreaterThan(0);
+  await page.keyboard.press('Enter'); // hear it again
+  const total: number = await page.evaluate(() => window.__game.round.spelling.total);
+  while ((await page.evaluate(() => window.__game.screen)) === 'play') await typeNext(page, 1, 100);
+  await expect(page.locator('.spell-word')).toHaveCount(total, { timeout: 10_000 });
+  await expect(page.getByText('Every word spelled first time!')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('wrong keys do not advance and lower accuracy', async ({ page }) => {
   await fresh(page);
   await newGardener(page, 'Tester', 'bloom');

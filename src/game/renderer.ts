@@ -612,6 +612,8 @@ export class Renderer {
         if (i < p.typed) {
           ctx.fillStyle = TYPED;
           ctx.fillText(ch, cxp, cy);
+        } else if (p.hidden && p.state === 'fly') {
+          this.drawHiddenSlot(p, ch, i, cxp, cy, lay, alpha, t);
         } else if (i === p.typed && p.state === 'fly') {
           const cw = lay.xs[i + 1] - lay.xs[i];
           const hop = this.reducedMotion ? 0 : Math.sin(t * 6) * lay.font * 0.03;
@@ -634,6 +636,43 @@ export class Renderer {
       }
     }
     ctx.restore();
+  }
+
+  /**
+   * Spelling Bee: a letter still to spell is a blank slot. The next one has the
+   * blinking caret, a brief coral flash of a wrong guess, and, when the player
+   * is stuck, its letter slowly fading in.
+   */
+  private drawHiddenSlot(p: Puff, ch: string, i: number, x: number, y: number, lay: LabelLayout, alpha: number, t: number) {
+    const ctx = this.ctx;
+    const cw = lay.xs[i + 1] - lay.xs[i];
+    const lineH = Math.max(2.5, lay.font * 0.08);
+    const lineX = x + cw * 0.1, lineW = Math.max(cw * 0.8, lay.font * 0.3), lineY = y + lay.font * 0.12;
+    if (i !== p.typed) {
+      ctx.fillStyle = INK;
+      ctx.globalAlpha = alpha * 0.3;
+      roundRect(ctx, lineX, lineY, lineW, lineH, 2);
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+      return;
+    }
+    const hint = p.hint ?? 0;
+    if (hint > 0) {
+      ctx.fillStyle = NEXT;
+      ctx.globalAlpha = alpha * 0.85 * easeInOut(hint);
+      ctx.fillText(ch, x, y);
+    }
+    const wt = p.wrongT ?? Infinity;
+    if (p.wrongCh && wt < 0.7) {
+      ctx.fillStyle = PETALS.coral.fill;
+      ctx.globalAlpha = alpha * (1 - wt / 0.7);
+      ctx.fillText(p.wrongCh.toLowerCase(), x, y - wt * lay.font * 0.4);
+    }
+    ctx.fillStyle = NEXT;
+    ctx.globalAlpha = alpha * (0.55 + 0.45 * Math.sin(t * 6));
+    roundRect(ctx, lineX, lineY, lineW, lineH, 2);
+    ctx.fill();
+    ctx.globalAlpha = alpha;
   }
 
   private updateParticles(dt: number) {

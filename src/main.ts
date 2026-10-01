@@ -1,8 +1,9 @@
 import './ui/styles.css';
 import { Renderer } from './game/renderer';
-import { Round, MODES, getMode, type Mode, type ModeId, type RoundEvent } from './game/round';
+import { Round, MODES, getMode, type Mode, type ModeId, type RoundEvent, type SpellingResult } from './game/round';
 import { Bot } from './game/bot';
 import { sound } from './audio/sound';
+import { speech, SPELLING_WORDS } from './audio/speech';
 import { createKeyboard, FINGER_NAME, FINGER_OF } from './ui/keyboard';
 import { store, AVATARS, type Profile } from './storage/store';
 import { littleName } from './engine/content';
@@ -45,6 +46,7 @@ function applySettings() {
   sound.muted = !s.sound;
   sound.musicEnabled = s.music;
   sound.setVolume(s.volume);
+  speech.volume = s.volume; // the spelling voice ignores "Sound effects": the game needs it
   const rm = s.reducedMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
   renderer.reducedMotion = rm;
   document.documentElement.classList.toggle('reduced-motion', s.reducedMotion);
@@ -138,6 +140,11 @@ function handleEvents(events: RoundEvent[]) {
         live.textContent = `${e.puff.text}. ${round.stats.flowers.length} flowers.`;
         break;
       case 'escape': sound.escape(); break;
+      case 'hint':
+        // Stuck: say the word again as its next letter starts to fade in.
+        speech.say(e.puff.text);
+        cheer(pick(['Here’s a clue! ✨', 'A little clue! ✨', 'Look closely! ✨']));
+        break;
       case 'streak':
         sound.streak(e.combo);
         cheer(e.combo >= 20 ? pick(['Unbeelievable!', 'Bee-autiful!', 'You’re a legend!']) : pick(['Buzz-tastic!', 'Wonderful!', 'Keep going!', 'Hooray!', 'So good!']));
@@ -148,7 +155,15 @@ function handleEvents(events: RoundEvent[]) {
         break;
       case 'ending': sound.roundEnd(); break;
       case 'end': finishRound(); break;
-      case 'spawn': break;
+      case 'spawn':
+        if (e.puff.hidden) {
+          const word = e.puff.text;
+          // Read it out as the puff floats in (and fetch the next one's clips).
+          setTimeout(() => { if (round?.puffs.some((p) => p.text === word && p.state === 'fly') && !paused) speech.say(word, true); }, 500);
+          const next = round.spelling?.queue[0];
+          if (next) speech.preload(next.word);
+        }
+        break;
     }
   }
 }
@@ -172,6 +187,7 @@ window.addEventListener('keydown', (e) => {
     // While paused, a focused button activates natively; otherwise Enter/Space resume.
     if (paused) { if ((key === 'Enter' || key === ' ') && !onButton) { e.preventDefault(); togglePause(); } return; }
     if (key === 'Backspace') { e.preventDefault(); round?.release(); return; }
+    if (key === 'Enter' && round?.spelling) { e.preventDefault(); sayAgain(); return; }
     if (key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !e.isComposing) {
       e.preventDefault();
       if (e.repeat) return;
@@ -198,7 +214,14 @@ typeInput.addEventListener('compositionend', flushInput);
 canvas.addEventListener('pointerdown', () => {
   sound.unlock();
   if (screen === 'play') focusTyping();
+  if (screen === 'play' && !paused) sayAgain();
 });
+
+/** Spelling Bee: hear the current word again (Enter, the 🔊 button, or a tap on the sky). */
+function sayAgain() {
+  const p = round?.spelling ? round.puffs.find((q) => q.hidden && q.state === 'fly') : null;
+  if (p) speech.say(p.text);
+}
 window.addEventListener('pointerdown', () => sound.unlock(), { capture: true });
 
 // Title-screen play-along: the scene reacts to the pointer (see Renderer).
@@ -373,10 +396,13 @@ function showModes() {
   const lv = getLevel(p.skill.level);
   const modes = h('div', { class: 'modes rise-in', role: 'group', 'aria-label': 'Choose a game' });
   const paint = () => modes.querySelectorAll<HTMLButtonElement>('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === mode)));
-  for (const m of MODES) {
+  const games = MODES.filter((m) => m.id !== 'spelling' || SPELLING_WORDS.length);
+  if (!games.some((m) => m.id === mode)) mode = games[0].id;
+  for (const m of games) {
     const best = store.leaderboard(m.id, 'score', 1000).find((s) => s.profileId === p.id);
+    const detail = m.id === 'spelling' ? `Listen to this week’s ${SPELLING_WORDS.length} words and spell them.` : m.detail;
     modes.append(h('button', { class: 'mode', type: 'button', 'data-id': m.id, onclick: () => { mode = m.id; paint(); sound.uiHover(); }, ondblclick: () => go() },
-      h('span', { class: 'e' }, m.emoji), h('b', {}, m.name), h('small', {}, m.detail),
+      h('span', { class: 'e' }, m.emoji), h('b', {}, m.name), h('small', {}, detail),
       best ? h('span', { class: 'best' }, `Best: ${best.score.toLocaleString()}`) : null));
   }
   paint();
@@ -409,8 +435,8 @@ function showModes() {
     if (e.key === 'Enter') { e.preventDefault(); go(); }
     else if (e.key === 'Escape') showProfiles();
     else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      const i = MODES.findIndex((m) => m.id === mode);
-      mode = MODES[(i + (e.key === 'ArrowRight' ? 1 : MODES.length - 1)) % MODES.length].id; paint(); sound.uiHover();
+      const i = games.findIndex((m) => m.id === mode);
+      mode = games[(i + (e.key === 'ArrowRight' ? 1 : games.length - 1)) % games.length].id; paint(); sound.uiHover();
     }
   });
 }
@@ -465,7 +491,8 @@ function startRound(mode: Mode) {
   sound.unlock();
   if (touchOnly) focusTyping();
   renderer.clearGarden();
-  round = new Round(p.skill, mode, Math.random, { little: littleOpts(p), noCaps: !!p.noCaps });
+  round = new Round(p.skill, mode, Math.random, { little: littleOpts(p), noCaps: !!p.noCaps, spelling: SPELLING_WORDS });
+  if (round.spelling) speech.preload(round.spelling.queue[0].word);
   paused = false;
   lastKeyAt = performance.now();
   for (const k in hudCache) delete hudCache[k];
@@ -487,6 +514,7 @@ function startRound(mode: Mode) {
           h('div', { class: 'stat score' }, score, h('small', {}, 'score')),
           h('div', { class: 'stat' }, wpm, h('small', {}, 'wpm')),
           h('div', { class: 'stat acc' }, acc, h('small', {}, 'accuracy'))),
+        round.spelling ? iconBtn('sound', 'Hear the word again (Enter)', sayAgain) : null,
         iconBtn('pause', 'Pause', togglePause)),
     ),
   );
@@ -499,14 +527,15 @@ function startRound(mode: Mode) {
   hud = { root, lvl, fill, sun, dayLabel, score, wpm, acc, streak, streakN };
   show(root, 'play');
   sound.roundStart();
-  sound.startMusic();
+  // Spelling Bee: no music, so the words are easy to hear.
+  if (!round.spelling) sound.startMusic();
   updateGuide(true);
 }
 
 function updateHud() {
   if (!hud || !round) return;
   const r = round;
-  set('lvl', `Lv <b>${r.level.id}</b><span class="lvn"> · ${r.little ? '🐣 Little Words' : r.level.name}</span>`, (v) => (hud!.lvl.innerHTML = v));
+  set('lvl', r.spelling ? '🐝<span class="lvn"> Spelling Bee</span>' : `Lv <b>${r.level.id}</b><span class="lvn"> · ${r.little ? '🐣 Little Words' : r.level.name}</span>`, (v) => (hud!.lvl.innerHTML = v));
   const day = r.day;
   set('day', day.toFixed(3), () => {
     const pct = (day * 100).toFixed(1);
@@ -514,7 +543,8 @@ function updateHud() {
     hud!.sun.style.left = `calc(${pct}% + ${15 - day * 30}px)`;
   });
   const n = r.stats.flowers.length;
-  const label = r.mode.flowerGoal ? `🌼 ${Math.min(n, r.mode.flowerGoal)} of ${r.mode.flowerGoal} flowers`
+  const label = r.spelling ? `🐝 ${r.spellingDone} of ${r.spelling.total} words`
+    : r.mode.flowerGoal ? `🌼 ${Math.min(n, r.mode.flowerGoal)} of ${r.mode.flowerGoal} flowers`
     : r.mode.duration ? `${fmtTime(Math.ceil(r.timeLeft ?? 0))} left`
       : `🌈 ${n} flower${n === 1 ? '' : 's'} · ${fmtTime(Math.floor(r.time))}`;
   set('daylabel', label, (v) => (hud!.dayLabel.textContent = v));
@@ -554,11 +584,13 @@ function updateGuide(force = false) {
   renderer.setBottomInset(want ? renderer.layout.h - kr.top + 4 : 0);
   renderer.setAvoid(want ? [kr.left - 30, kr.right + 30] : null);
   if (want) {
-    const ch = round.nextChar;
+    // Spelling Bee: the keyboard only lights the key once the hint has mostly faded in.
+    const sp = round.spelling ? round.puffs.find((q) => q.hidden && q.state === 'fly') : null;
+    const ch = !round.spelling ? round.nextChar : sp && (sp.hint ?? 0) >= 0.6 ? sp.text[sp.typed] : null;
     if (ch !== lastHighlight) { keyboard.highlight(ch); lastHighlight = ch; }
   }
   // Gentle nudge for little learners who are stuck.
-  if (round.level.patient && !hint && !paused && performance.now() - lastKeyAt > 8000 && round.nextChar) {
+  if (round.level.patient && !round.spelling && !hint && !paused && performance.now() - lastKeyAt > 8000 && round.nextChar) {
     const ch = round.nextChar;
     const finger = FINGER_OF[ch.toLowerCase()];
     showHint(ch === ' ' ? 'Press the long space bar!' : `Find the <kbd>${ch.toUpperCase()}</kbd> key${finger ? ` (${FINGER_NAME[finger]})` : ''}!`);
@@ -618,6 +650,7 @@ function togglePause() {
   if (paused) {
     clearHint();
     sound.stopMusic();
+    speech.stop();
     const el = h('div', { class: 'screen dim fade-in', id: 'pause' }, h('div', { class: 'card pop-in', style: 'max-width:440px' },
       h('h2', {}, 'Paused'),
       h('p', { class: 'sub' }, 'Bumble is having a little rest 🐝'),
@@ -630,7 +663,7 @@ function togglePause() {
     setTimeout(() => el.querySelector<HTMLElement>('[data-autofocus]')?.focus(), 30);
   } else {
     document.getElementById('pause')?.remove();
-    sound.startMusic();
+    if (round.spelling) sayAgain(); else sound.startMusic();
     if (touchOnly) focusTyping();
     lastKeyAt = performance.now();
   }
@@ -655,6 +688,7 @@ function finishRound() {
   typeInput.blur();
   if (capsEl) { capsEl.remove(); capsEl = null; }
   sound.stopMusic();
+  speech.stop();
   if (!p) return showTitle();
 
   const s = r.stats;
@@ -684,7 +718,7 @@ function finishRound() {
     : levelEnd < s.levelStart ? h('span', { class: 'badge' }, `🍃 Level ${levelEnd}: ${getLevel(levelEnd).name}`)
       : h('span', { class: 'badge' }, `🌿 Level ${levelEnd}: ${getLevel(levelEnd).name}`);
   const badges = h('div', { class: 'badges rise-in' },
-    lvlBadge,
+    r.spelling ? null : lvlBadge, // spelling doesn't move the typing level
     rank > 0 && rank <= 10 ? h('span', { class: 'badge butter' }, `🏆 #${rank} on ${r.mode.name}`) : null,
     newKinds.length === 1 ? h('span', { class: 'badge butter' }, flowerThumb(newKinds[0], 26, 32), `New flower: ${FLOWER_NAMES[newKinds[0]]}!`) : null,
     newKinds.length > 1 ? h('span', { class: 'badge butter', title: newKinds.map((k) => FLOWER_NAMES[k]).join(', ') }, ...newKinds.slice(0, 8).map((k) => flowerThumb(k, 22, 28)), `${newKinds.length} new flowers!`) : null,
@@ -703,6 +737,7 @@ function finishRound() {
       num('best streak', String(s.bestCombo)),
     ),
     badges,
+    r.spelling ? spellingReport(r.spelling.results) : null,
     h('div', { class: 'row' },
       btn('Play again', 'big', again, { 'data-autofocus': true }),
       btn('Change game', 'ghost small', showModes),
@@ -729,6 +764,16 @@ function finishRound() {
       if (e.key === 'Enter') { e.preventDefault(); again(); } else if (e.key === 'Escape') showModes();
     });
   }, 900);
+}
+
+/** Spelling Bee results: each word, starred if it was spelled first time with no help. */
+function spellingReport(results: SpellingResult[]): HTMLElement {
+  const words = [...new Set(results.map((x) => x.word))];
+  const easy = (w: string) => results.some((x) => x.word === w && !x.retry && !x.hinted && x.wrong === 0);
+  const practise = words.filter((w) => !easy(w));
+  return h('div', { class: 'spelling-report rise-in' },
+    h('div', { class: 'spell-words' }, ...words.map((w) => h('span', { class: `spell-word${easy(w) ? ' easy' : ''}`, title: easy(w) ? 'Spelled first time!' : 'Worth another practice' }, easy(w) ? '⭐ ' : '🌱 ', w))),
+    h('p', { class: 'keytip' }, practise.length ? `Worth another practice: ${practise.join(', ')}` : 'Every word spelled first time! 🎉'));
 }
 
 // ----------------------------------------------------------- leaderboard --
