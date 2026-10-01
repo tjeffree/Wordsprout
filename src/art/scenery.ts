@@ -129,7 +129,12 @@ interface Cloud {
   speed: number;
   alpha: number;
   bob: number;
+  jiggle: number;
+  tickle: number;
 }
+
+/** Anything the pointer can tickle (sky clouds and the rainbow's feet). */
+export interface Tickleable { jiggle: number; tickle: number }
 
 // ---------------------------------------------------------------- Scenery
 export class Scenery {
@@ -207,6 +212,8 @@ export class Scenery {
         speed: depthSpeed[depth] * Math.max(0.7, Math.min(1.6, w / 1100)),
         alpha: depthAlpha[depth],
         bob: rand() * 6.28,
+        jiggle: 0,
+        tickle: 0,
       });
     }
     // draw far ones first
@@ -811,6 +818,55 @@ export class Scenery {
     }
   }
 
+  // ------------------------------------------------------------ play-along
+  // State the renderer drives from the pointer; drawing just reads it.
+  /** 0 = dozing, 1 = wide awake and grinning. */
+  sunWake = 0;
+  /** Squish after a poke, decays to 0. */
+  sunBounce = 0;
+  /** Where the sun's eyes look (unit-ish vector). */
+  sunLook = { x: 0, y: 0 };
+  /** Keep the sun's face left of this x (e.g. the title logo) when there's room. */
+  sunClearOf: number | null = null;
+  private raySpin = 0;
+  private sunGeo = { x: 0, y: 0, r: 0 };
+  private feet: (Tickleable & { x: number; y: number; w: number; h: number })[] = [
+    { x: 0, y: 0, w: 0, h: 0, jiggle: 0, tickle: 0 },
+    { x: 0, y: 0, w: 0, h: 0, jiggle: 0, tickle: 0 },
+  ];
+  private feetShown = false;
+
+  update(dt: number): void {
+    for (const c of [...this.clouds, ...this.feet]) {
+      c.jiggle = Math.max(0, c.jiggle - dt * 1.4);
+      c.tickle = Math.max(0, c.tickle - dt * 250);
+    }
+    this.sunBounce = Math.max(0, this.sunBounce - dt * 1.6);
+    this.raySpin += dt * this.sunWake * 0.5;
+  }
+
+  hitSun(x: number, y: number): boolean {
+    const g = this.sunGeo;
+    return g.r > 0 && Math.hypot(x - g.x, y - g.y) < g.r * 1.4;
+  }
+
+  get sunPos() { return this.sunGeo; }
+
+  /** The cloud under (x, y), frontmost first, or null. */
+  cloudAt(x: number, y: number, time: number): Tickleable | null {
+    const inside = (cx: number, cy: number, w: number, h: number) =>
+      x > cx + w * 0.12 && x < cx + w * 0.9 && y > cy + h * 0.25 && y < cy + h * 0.9;
+    if (this.feetShown) for (const f of this.feet) if (inside(f.x, f.y, f.w, f.h)) return f;
+    for (let i = this.clouds.length - 1; i >= 0; i--) {
+      const cl = this.clouds[i];
+      if (inside(this.cloudX(cl, time), this.cloudY(cl, time), cl.w, cl.h)) return cl;
+    }
+    return null;
+  }
+
+  /** Centres of the rainbow's two foot clouds (where it is drawn from). */
+  get rainbowFeet() { return this.feet.map((f) => ({ x: f.x + f.w / 2, y: f.y + f.h * 0.6 })); }
+
   // ------------------------------------------------------------ drawing
   private updateSky(day: number) {
     if (Math.abs(day - this.skyDay) <= 0.01) return;
@@ -837,9 +893,13 @@ export class Scenery {
   private drawSun(ctx: CanvasRenderingContext2D, time: number, day: number) {
     const { width: w, height: h, groundY: g } = this.L;
     const d = clamp01(day);
-    const sx = w * lerp(0.14, 0.84, d);
     const sy = g * (0.19 + 0.42 * Math.pow(d, 1.6));
-    const r = Math.max(26, Math.min(72, Math.min(w, h) * 0.082)) * (1 + 0.14 * d) * (1 + 0.012 * Math.sin(time * 0.9));
+    const wake = clamp01(this.sunWake);
+    const r = Math.max(26, Math.min(72, Math.min(w, h) * 0.082)) * (1 + 0.14 * d) * (1 + 0.012 * Math.sin(time * 0.9)) *
+      (1 + 0.05 * wake + 0.09 * this.sunBounce * Math.sin(time * 16));
+    let sx = w * lerp(0.14, 0.84, d);
+    if (this.sunClearOf !== null) sx = Math.max(Math.min(sx, this.sunClearOf - r * 1.15), Math.min(sx, r * 1.5));
+    this.sunGeo = { x: sx, y: sy, r };
     const halo = mix('#fff1b0', '#ffb070', d);
     const [hr, hg, hb] = hexToRgb(halo);
 
@@ -855,8 +915,8 @@ export class Scenery {
     // slowly turning soft rays
     ctx.save();
     ctx.translate(sx, sy);
-    ctx.rotate(time * 0.035);
-    ctx.strokeStyle = `rgba(255,${Math.round(244 - 30 * d)},${Math.round(200 - 50 * d)},0.2)`;
+    ctx.rotate(time * 0.035 + this.raySpin);
+    ctx.strokeStyle = `rgba(255,${Math.round(244 - 30 * d)},${Math.round(200 - 50 * d)},${0.2 + 0.18 * wake})`;
     ctx.lineWidth = r * 0.16;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -864,7 +924,7 @@ export class Scenery {
     for (let i = 0; i < rays; i++) {
       const a = (i / rays) * Math.PI * 2;
       const r0 = r * 1.28;
-      const r1 = r * (i % 2 ? 1.65 : 1.95);
+      const r1 = r * (i % 2 ? 1.65 : 1.95) * (1 + 0.22 * wake);
       ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
       ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
     }
@@ -885,23 +945,63 @@ export class Scenery {
     ctx.lineWidth = Math.max(1.5, r * 0.04);
     ctx.stroke();
 
-    // sleepy kind face (subtle)
-    const faceCol = rgba(mix('#c9772e', '#b8502e', d), 0.5);
+    // kind face: dozing until someone says hello
+    const faceCol = rgba(mix('#c9772e', '#b8502e', d), 0.5 + 0.35 * wake);
+    const blink = wake > 0.9 && (time + 0.7) % 3.6 < 0.13;
+    const open = blink ? 0 : clamp01((wake - 0.3) / 0.5);
     ctx.strokeStyle = faceCol;
     ctx.lineWidth = r * 0.06;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (const sg of [-1, 1]) {
-      const ex = sx + sg * r * 0.34;
-      const ey = sy - r * 0.08;
-      ctx.moveTo(ex + r * 0.15, ey);
-      ctx.arc(ex, ey, r * 0.15, 0, Math.PI, false);
+    if (open < 0.2) {
+      ctx.beginPath();
+      for (const sg of [-1, 1]) {
+        const ex = sx + sg * r * 0.34;
+        const ey = sy - r * 0.08;
+        ctx.moveTo(ex + r * 0.15, ey);
+        ctx.arc(ex, ey, r * 0.15, 0, Math.PI, false);
+      }
+      ctx.stroke();
+    } else {
+      const lx = this.sunLook.x * r * 0.06, ly = this.sunLook.y * r * 0.05;
+      for (const sg of [-1, 1]) {
+        const ex = sx + sg * r * 0.34 + lx;
+        const ey = sy - r * 0.1 + ly;
+        ctx.fillStyle = 'rgba(110,62,34,0.88)';
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, r * 0.1, r * 0.14 * open, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (open > 0.6) {
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.beginPath();
+          ctx.arc(ex - r * 0.035, ey - r * 0.05 * open, r * 0.035, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(sx, sy + r * 0.02, r * 0.3, Math.PI * 0.2, Math.PI * 0.8, false);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,120,110,0.26)';
+    // the smile widens, then opens into a happy grin
+    const grin = clamp01((wake - 0.55) / 0.35);
+    if (grin < 1) {
+      ctx.globalAlpha = 1 - grin;
+      ctx.beginPath();
+      ctx.arc(sx, sy + r * 0.02, r * (0.3 + 0.04 * wake), Math.PI * (0.2 - 0.08 * wake), Math.PI * (0.8 + 0.08 * wake), false);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (grin > 0) {
+      ctx.globalAlpha = grin;
+      ctx.fillStyle = 'rgba(150,66,48,0.82)';
+      ctx.beginPath();
+      ctx.moveTo(sx - r * 0.25, sy + r * 0.13);
+      ctx.quadraticCurveTo(sx, sy + r * 0.66, sx + r * 0.25, sy + r * 0.13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,128,128,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy + r * 0.33, r * 0.1, r * 0.055, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = `rgba(255,120,110,${0.26 + 0.2 * wake})`;
     ctx.beginPath();
     for (const sg of [-1, 1]) {
       ctx.moveTo(sx + sg * r * 0.56 + r * 0.17, sy + r * 0.22);
@@ -910,22 +1010,27 @@ export class Scenery {
     ctx.fill();
   }
 
+  private cloudX(cl: Cloud, time: number) {
+    const span = this.L.width + cl.w * 2;
+    let x = (cl.x0 - time * cl.speed) % span;
+    if (x < 0) x += span;
+    return x - cl.w;
+  }
+
+  private cloudY(cl: Cloud, time: number) { return cl.y + Math.sin(time * 0.25 + cl.bob) * 2.5; }
+
   private drawClouds(ctx: CanvasRenderingContext2D, time: number, day: number) {
-    const w = this.L.width;
     const d = clamp01(day);
     for (const cl of this.clouds) {
-      const span = w + cl.w * 2;
-      let x = (cl.x0 - time * cl.speed) % span;
-      if (x < 0) x += span;
-      x -= cl.w;
-      const y = cl.y + Math.sin(time * 0.25 + cl.bob) * 2.5;
+      const x = this.cloudX(cl, time);
+      const y = this.cloudY(cl, time);
       if (d < 0.98) {
         ctx.globalAlpha = cl.alpha * (1 - d);
-        ctx.drawImage(this.cloudsDay[cl.shape], Math.round(x), Math.round(y), cl.w, cl.h);
+        drawJiggly(ctx, this.cloudsDay[cl.shape], x, y, cl.w, cl.h, cl.jiggle, time + cl.bob);
       }
       if (d > 0.02) {
         ctx.globalAlpha = cl.alpha * d;
-        ctx.drawImage(this.cloudsDusk[cl.shape], Math.round(x), Math.round(y), cl.w, cl.h);
+        drawJiggly(ctx, this.cloudsDusk[cl.shape], x, y, cl.w, cl.h, cl.jiggle, time + cl.bob);
       }
     }
     ctx.globalAlpha = 1;
@@ -934,6 +1039,7 @@ export class Scenery {
   drawBack(ctx: CanvasRenderingContext2D, time: number, day: number): void {
     const { width: w, height: h, groundY: g } = this.L;
     const d = clamp01(day);
+    this.feetShown = false;
     this.updateSky(d);
     ctx.fillStyle = this.skyGrad!;
     ctx.fillRect(0, 0, w, h);
@@ -977,7 +1083,8 @@ export class Scenery {
     }
   }
 
-  drawFront(ctx: CanvasRenderingContext2D, time: number): void {
+  /** `push` bends the grass away from a nearby pointer. */
+  drawFront(ctx: CanvasRenderingContext2D, time: number, push: { x: number; y: number } | null = null): void {
     const { width: w, height: h } = this.L;
     ctx.drawImage(this.front.c, 0, this.frontTop, this.front.w, this.front.h);
     const T = this.tuft;
@@ -993,8 +1100,13 @@ export class Scenery {
         const hh = T.hh[i];
         const bw = T.bw[i];
         const sway = Math.sin(time * 1.3 + T.ph[i] * 0.4 + x * 0.006) * 0.12 + Math.sin(time * 2.3 + T.ph[i]) * 0.03;
-        const tx = x + (T.lean[i] + sway) * hh;
         const ty = yb - hh;
+        let bend = 0;
+        if (push && push.y > ty - 24) {
+          const dx = x - push.x;
+          if (Math.abs(dx) < 60) bend = Math.sign(dx) * (1 - Math.abs(dx) / 60) * 0.8;
+        }
+        const tx = x + (T.lean[i] + sway + bend) * hh;
         const mx = (tx - x) * 0.35;
         ctx.moveTo(x - bw, yb);
         ctx.quadraticCurveTo(x - bw * 0.4 + mx, yb - hh * 0.55, tx, ty);
@@ -1036,9 +1148,22 @@ export class Scenery {
     const wob = Math.sin(time * 0.6) * 2;
     const left = cx - outer + bw * 3;
     const right = cx + outer - bw * 3;
-    ctx.drawImage(this.cloudsDay[0], left - cw * 0.62, cy - cw * 0.34 + wob, cw, cw * (150 / 320));
+    const ch = cw * (150 / 320);
+    const [fl, fr] = this.feet;
+    Object.assign(fl, { x: left - cw * 0.62, y: cy - cw * 0.34 + wob, w: cw, h: ch });
+    Object.assign(fr, { x: right - cw * 0.38, y: cy - cw * 0.34 - wob, w: cw, h: ch });
+    this.feetShown = k > 0.2;
+    drawJiggly(ctx, this.cloudsDay[0], fl.x, fl.y, cw, ch, fl.jiggle, time);
     ctx.globalAlpha = k * Math.min(1, sweep * 1.4);
-    ctx.drawImage(this.cloudsDay[1], right - cw * 0.38, cy - cw * 0.34 - wob, cw, cw * (150 / 320));
+    drawJiggly(ctx, this.cloudsDay[1], fr.x, fr.y, cw, ch, fr.jiggle, time + 1);
     ctx.globalAlpha = 1;
   }
+}
+
+/** Draw a cloud bitmap, squashing and stretching it while it giggles. */
+function drawJiggly(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement, x: number, y: number, w: number, h: number, jiggle: number, t: number) {
+  if (jiggle < 0.01) { ctx.drawImage(img, Math.round(x), Math.round(y), w, h); return; }
+  const s = Math.sin(t * 26) * 0.08 * jiggle;
+  const jw = w * (1 + s), jh = h * (1 - s);
+  ctx.drawImage(img, x - (jw - w) / 2, y + (h - jh), jw, jh);
 }

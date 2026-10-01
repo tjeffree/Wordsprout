@@ -2,7 +2,7 @@
 // butterflies and particles. Game rules live in round.ts; this file only
 // visualises them and reacts to round events.
 
-import { Scenery } from '../art/scenery';
+import { Scenery, type Tickleable } from '../art/scenery';
 import { drawBee, drawButterfly, drawPuff, drawSeed, drawSparkle, type BeeMood } from '../art/characters';
 import { drawFlower, flowerSwayAngle, FLOWER_RARITY, type FlowerKind } from '../art/flowers';
 import { INK, PETALS, clamp01, easeOutBack, easeOutCubic, lerp } from '../art/palette';
@@ -21,7 +21,7 @@ interface Layout {
   bottomInset: number;
 }
 
-interface Planted { nx: number; row: number; kind: FlowerKind; seed: number; t0: number; sway: number; scale: number }
+interface Planted { nx: number; row: number; kind: FlowerKind; seed: number; t0: number; sway: number; scale: number; push?: number; pushV?: number }
 
 interface Particle {
   kind: 'seed' | 'sparkle' | 'plant' | 'text' | 'petal';
@@ -48,7 +48,7 @@ export class Renderer {
   private particles: Particle[] = [];
   private garden: Planted[] = [];
   private labelCache = new WeakMap<Puff, LabelLayout>();
-  private bee = { x: 120, y: 160, vx: 0, vy: 0, mood: 'idle' as BeeMood, moodT: 0, facing: 1 as 1 | -1, loop: 0 };
+  private bee = { x: 120, y: 160, vx: 0, vy: 0, mood: 'idle' as BeeMood, moodT: 0, facing: 1 as 1 | -1, loop: 0, follow: 0 };
   private butterflies: { x: number; y: number; seed: number; tx: number; ty: number; t: number }[] = [];
   private rainbow = 0;
   private time = 0;
@@ -111,6 +111,141 @@ export class Renderer {
   invalidateLabels() { this.labelCache = new WeakMap(); }
 
   get flowerCount() { return this.garden.length; }
+
+  // ---------------------------------------------------------- play-along --
+  // On the title screen the scene plays with the pointer: Bumble tags along,
+  // the sun wakes up, flowers and grass get brushed aside, and tickling a
+  // cloud makes the rainbow paint itself again.
+  interactive = false;
+  /** Little interactions worth a sound. */
+  onFun: ((what: 'bee' | 'sun' | 'giggle' | 'rainbow') => void) | null = null;
+  private ptr = { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, on: false };
+  private sunAwake = 0;
+  private rainbowBoost = 0;
+
+  pointerMove(x: number, y: number) {
+    const p = this.ptr;
+    if (!p.on) { p.px = x; p.py = y; p.vx = p.vy = 0; }
+    p.x = x; p.y = y; p.on = true;
+  }
+
+  pointerLeave() { this.ptr.on = false; }
+
+  /** Keep the sun out from behind something (CSS px x of its left edge), or null. */
+  setSunClearOf(x: number | null) { this.scenery.sunClearOf = x; }
+
+  /** A click or tap on the scene. Returns true if it landed on something playful. */
+  poke(x: number, y: number): boolean {
+    if (!this.interactive) return false;
+    this.pointerMove(x, y);
+    const b = this.bee;
+    if (Math.hypot(x - b.x, y - b.y) < this.beeSize) {
+      b.loop = 1; b.mood = 'cheer'; b.moodT = 1.4; b.follow = 4;
+      this.onFun?.('bee');
+      for (let i = 0; i < 6; i++) this.addSparkle(b.x, b.y, 0.8, '#ffe066');
+      return true;
+    }
+    const s = this.scenery;
+    if (s.hitSun(x, y)) {
+      if (s.sunWake < 0.5) this.onFun?.('sun');
+      s.sunBounce = 1; this.sunAwake = 4;
+      for (let i = 0; i < 8; i++) this.addSparkle(s.sunPos.x, s.sunPos.y, 1, '#fff1b0', s.sunPos.r * 2);
+      return true;
+    }
+    const c = s.cloudAt(x, y, this.time);
+    if (c) { this.tickle(c, 400); return true; }
+    return false;
+  }
+
+  /** True while the pointer is over something that reacts to a click. */
+  get hot(): boolean {
+    const p = this.ptr;
+    if (!this.interactive || !p.on) return false;
+    return Math.hypot(p.x - this.bee.x, p.y - this.bee.y) < this.beeSize || this.scenery.hitSun(p.x, p.y) || !!this.scenery.cloudAt(p.x, p.y, this.time);
+  }
+
+  private get beeSize() { return clamp(Math.min(this.L.w * 0.055, this.L.h * 0.08), 40, 84); }
+
+  private updatePlay(dt: number) {
+    const p = this.ptr, s = this.scenery;
+    // Raw distance, not velocity: a back-and-forth wiggle averages to zero velocity.
+    const moved = Math.hypot(p.x - p.px, p.y - p.py);
+    if (dt > 0) {
+      const k = Math.min(1, dt * 15);
+      p.vx += ((p.x - p.px) / dt - p.vx) * k;
+      p.vy += ((p.y - p.py) / dt - p.vy) * k;
+    }
+    p.px = p.x; p.py = p.y;
+    const on = this.interactive && p.on;
+
+    // The sun wakes when you visit, and dozes off a while after you leave.
+    if (on && s.hitSun(p.x, p.y)) {
+      if (this.sunAwake <= 0 && s.sunWake < 0.3) this.onFun?.('sun');
+      this.sunAwake = 2.5;
+    }
+    this.sunAwake -= dt;
+    const awake = this.sunAwake > 0;
+    s.sunWake += ((awake ? 1 : 0) - s.sunWake) * Math.min(1, dt * (awake ? 3 : 0.7));
+    const look = on ? p : this.bee;
+    const sp = s.sunPos;
+    const ld = Math.hypot(look.x - sp.x, look.y - sp.y) || 1;
+    s.sunLook.x += ((look.x - sp.x) / ld - s.sunLook.x) * Math.min(1, dt * 6);
+    s.sunLook.y += ((look.y - sp.y) / ld - s.sunLook.y) * Math.min(1, dt * 6);
+
+    // Wiggling over a cloud tickles it.
+    if (on && dt > 0 && moved / dt > 120) {
+      const c = s.cloudAt(p.x, p.y, this.time);
+      if (c) this.tickle(c, Math.min(moved, 60));
+    }
+    s.update(dt);
+    this.rainbowBoost = Math.max(0, this.rainbowBoost - dt);
+    if (!this.interactive) this.bee.follow = 0;
+  }
+
+  private tickle(c: Tickleable, amount: number) {
+    if (c.jiggle < 0.3) this.onFun?.('giggle');
+    c.jiggle = 1;
+    c.tickle += amount;
+    // Let a fresh rainbow finish painting before it can be redrawn.
+    if (c.tickle > 700) { c.tickle = 0; if (this.rainbowBoost < 4.5) this.redrawRainbow(); }
+  }
+
+  /** Wipe the rainbow and paint it fresh across the sky. */
+  private redrawRainbow() {
+    this.rainbow = 0;
+    this.rainbowBoost = 7;
+    this.onFun?.('rainbow');
+    const cols = Object.values(PETALS);
+    // Feet are only measured once the rainbow has been drawn; fall back to its span.
+    const L = this.L;
+    const outer = Math.min(L.w * 0.47, L.groundY * 0.72);
+    for (const sg of [-1, 1]) {
+      const x = L.w / 2 + sg * outer * 0.9, y = L.groundY - 0.02 * L.h - outer * 0.08;
+      for (let i = 0; i < 10; i++) this.addSparkle(x, y, 1.2, cols[i % cols.length].fill, 40);
+    }
+  }
+
+  /** Flowers lean away from a hovering pointer and wobble when brushed. */
+  private pushFlower(f: Planted, x: number, y: number, size: number, dt: number) {
+    let lean = 0, brush = 0;
+    const p = this.ptr;
+    if (this.interactive && p.on) {
+      const dx = x - p.x;
+      const top = y - size * 1.05;
+      const reach = size * 0.4;
+      if (Math.abs(dx) < reach && p.y > top && p.y < y + 4) {
+        const near = 1 - Math.abs(dx) / reach;
+        lean = Math.sign(dx || 1) * near * 0.3;
+        brush = p.vx * near * 0.025;
+      }
+    }
+    let a = f.push ?? 0, v = f.pushV ?? 0;
+    v += (-(a - lean) * 45 - v * 4.5 + brush) * dt;
+    a = clamp(a + v * dt, -0.7, 0.7);
+    f.push = a; f.pushV = v;
+    // drawFlower turns `sway` into a lean of sway * 0.14 radians.
+    return a / 0.14;
+  }
 
   // ------------------------------------------------------------ geometry --
   private laneY(p: Puff, labelH: number): number {
@@ -372,9 +507,10 @@ export class Renderer {
     const ctx = this.ctx;
     const L = this.L;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.updatePlay(dt);
 
     this.scenery.drawBack(ctx, t, opts.day);
-    const rainbowTarget = opts.combo >= 8 ? clamp01((opts.combo - 6) / 14) : 0;
+    const rainbowTarget = Math.max(opts.combo >= 8 ? clamp01((opts.combo - 6) / 14) : 0, this.rainbowBoost > 0 ? 1 : 0);
     this.rainbow += (rainbowTarget - this.rainbow) * Math.min(1, dt * 1.5);
     if (this.rainbow > 0.01) this.scenery.drawRainbow(ctx, this.rainbow, t);
 
@@ -384,12 +520,12 @@ export class Renderer {
       const g = this.slotPos(f.nx, f.row);
       const growth = clamp01((t - f.t0) / 1.5);
       const size = this.flowerSize(f.row, f.kind) * f.scale;
-      const impulse = this.reducedMotion ? 0 : Math.sin(t * 5 + f.nx * 20) * f.sway;
+      const impulse = this.reducedMotion ? 0 : Math.sin(t * 5 + f.nx * 20) * f.sway + this.pushFlower(f, g.x, g.y, size, dt);
       if (growth >= 1 && FLOWER_RARITY[f.kind] < 4) this.drawFlowerSprite(f, g.x, g.y, size, t, impulse);
       else drawFlower(ctx, { kind: f.kind, x: g.x, y: g.y, size, growth, time: t, seed: f.seed, sway: impulse });
     }
     this.drawButterflies(dt);
-    this.scenery.drawFront(ctx, t);
+    this.scenery.drawFront(ctx, t, this.interactive && this.ptr.on && !this.reducedMotion ? this.ptr : null);
 
     // puffs
     if (round) {
@@ -615,8 +751,15 @@ export class Renderer {
 
   private drawButterflies(dt: number) {
     const L = this.L;
+    const p = this.ptr;
     for (const b of this.butterflies) {
       b.t += dt;
+      // Shy: flutter off when the pointer comes close.
+      if (this.interactive && p.on && Math.hypot(b.x * L.w - p.x, b.y * L.h - p.y) < 60) {
+        const dx = b.x * L.w - p.x || 1;
+        b.tx = clamp(b.x + Math.sign(dx) * rand(0.15, 0.3), 0.05, 0.95);
+        b.ty = rand((L.groundY - 90) / L.h, (L.groundY - 30) / L.h);
+      }
       if (Math.hypot(b.tx - b.x, (b.ty - b.y) * (L.h / L.w)) < 0.02) {
         b.tx = rand(0.05, 0.95);
         b.ty = rand((L.groundY - 70) / L.h, (L.groundY + 10) / L.h);
@@ -632,7 +775,7 @@ export class Renderer {
   private drawBumble(dt: number, round: Round | null) {
     const L = this.L;
     const b = this.bee;
-    const size = clamp(Math.min(L.w * 0.055, L.h * 0.08), 40, 84);
+    const size = this.beeSize;
     let tx = L.w * 0.1 + Math.sin(this.time * 0.5) * L.w * 0.03;
     let ty = L.skyTop + size * 0.6 + Math.sin(this.time * 0.9) * 14;
     const tgt = round?.target;
@@ -649,6 +792,21 @@ export class Renderer {
         ty = pp.y - pp.r * 0.6;
       }
     }
+    // Say hello to Bumble and it tags along until you stop moving.
+    const p = this.ptr;
+    if (this.interactive && p.on) {
+      const near = Math.hypot(p.x - b.x, p.y - b.y) < size;
+      if (near && b.follow <= 0 && Math.hypot(p.vx, p.vy) > 30) { b.follow = 3; b.mood = 'happy'; b.moodT = 1; this.onFun?.('bee'); }
+      if (b.follow > 0 && Math.hypot(p.vx, p.vy) > 30) b.follow = Math.max(b.follow, 3);
+    }
+    const following = b.follow > 0 && this.interactive;
+    if (following) {
+      b.follow -= dt;
+      const side = b.x < p.x ? -1 : 1;
+      tx = p.x + side * size * 0.85;
+      ty = p.y - size * 0.35 + Math.sin(this.time * 3) * size * 0.12;
+      if (b.moodT <= 0) { b.mood = 'happy'; b.moodT = 0.5; }
+    }
     if (b.loop > 0) {
       b.loop = Math.max(0, b.loop - dt * 0.9);
       const a = (1 - b.loop) * Math.PI * 2;
@@ -656,11 +814,12 @@ export class Renderer {
       ty -= (1 - Math.cos(a)) * size * 0.8;
     }
     // critically damped spring
-    const k = 9, d = 2 * Math.sqrt(k);
+    const k = following ? 6 : 9, d = 2 * Math.sqrt(k);
     b.vx += ((tx - b.x) * k - b.vx * d) * dt;
     b.vy += ((ty - b.y) * k - b.vy * d) * dt;
     b.x += b.vx * dt; b.y += b.vy * dt;
-    if (Math.abs(b.vx) > 25) b.facing = b.vx > 0 ? 1 : -1;
+    if (following && Math.abs(b.vx) < 60) b.facing = p.x > b.x ? 1 : -1;
+    else if (Math.abs(b.vx) > 25) b.facing = b.vx > 0 ? 1 : -1;
     b.moodT -= dt;
     if (b.moodT <= 0) b.mood = round && round.stats.combo >= 10 ? 'happy' : 'idle';
     drawBee(this.ctx, { x: b.x, y: b.y, size, time: this.time, mood: b.mood, facing: b.facing, tilt: clamp(b.vx / 900, -0.35, 0.35) });
