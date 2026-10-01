@@ -6,7 +6,7 @@ import { ContentPicker, keysNewAt, type LittleOpts } from '../engine/content';
 import { getLevel, type ContentKind, type Level } from '../engine/levels';
 import { pickFlowerKind, type FlowerKind } from '../art/flowers';
 
-export type ModeId = 'stroll' | 'sunny' | 'summer' | 'ten';
+export type ModeId = 'stroll' | 'sunny' | 'summer' | 'ten' | 'endless';
 export interface Mode { id: ModeId; name: string; detail: string; duration: number | null; flowerGoal: number | null; emoji: string }
 
 export const MODES: Mode[] = [
@@ -14,6 +14,7 @@ export const MODES: Mode[] = [
   { id: 'stroll', name: 'Morning Stroll', detail: 'A quick one-minute garden.', duration: 60, flowerGoal: null, emoji: '🌤️' },
   { id: 'sunny', name: 'Sunny Day', detail: 'Two minutes from sunrise to sunset.', duration: 120, flowerGoal: null, emoji: '☀️' },
   { id: 'summer', name: 'Long Summer', detail: 'Five minutes: grow a whole meadow.', duration: 300, flowerGoal: null, emoji: '🌻' },
+  { id: 'endless', name: 'Forever Garden', detail: 'No clock, no goal. Pause when you want to finish.', duration: null, flowerGoal: null, emoji: '🌈' },
 ];
 export const getMode = (id: ModeId) => MODES.find((m) => m.id === id) ?? MODES[0];
 
@@ -73,6 +74,7 @@ export interface RoundStats {
 
 const SPAWN_FADE = 0.45;     // seconds a puff takes to "blow in"
 const PATIENT_ARRIVE = 1.5;  // seconds for a patient puff to float to its rest spot
+const ENDLESS_SKY_PERIOD = 480; // seconds for one morning-afternoon-morning sky loop
 
 export class Round {
   readonly skill: SkillModel;
@@ -117,6 +119,8 @@ export class Round {
   get day(): number {
     if (this.mode.duration) return Math.min(1, this.time / this.mode.duration);
     if (this.mode.flowerGoal) return Math.min(1, this.stats.flowers.length / this.mode.flowerGoal);
+    // Endless: the sky drifts gently from morning to afternoon and back.
+    if (this.mode.id === 'endless') return 0.1 + 0.35 * (0.5 - 0.5 * Math.cos((this.time / ENDLESS_SKY_PERIOD) * Math.PI * 2));
     return 0;
   }
 
@@ -279,6 +283,9 @@ export class Round {
     const start = Math.max(p.availableAt, this.lastDoneAt);
     this.recordItem({ chars: p.text.length, correct: p.correct, wrong: p.wrong, escaped: true, ms: (this.time - start) * 1000, progress: 1, isLetters: p.kind === 'letters' });
   }
+
+  /** Wrap up early (how an endless round ends). */
+  finish(): void { this.beginEnding(); }
 
   private beginEnding(): void {
     if (this.phase !== 'play') return;

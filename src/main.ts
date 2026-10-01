@@ -480,7 +480,8 @@ function startRound(mode: Mode) {
   const root = h('div', { class: 'hud fade-in' },
     h('div', { class: 'hud-top' },
       h('div', { class: 'hud-left' }, h('div', { class: 'pill' }, h('span', { class: 'av' }, p.avatar), h('span', { class: 'nm' }, p.name)), lvl),
-      h('div', { class: 'hud-center' }, h('div', { class: 'daybar', 'aria-hidden': 'true' }, fill, sun), h('div', { class: 'hud-sub' }, dayLabel, streak)),
+      // Endless rounds have no day to get through, so no day bar.
+      h('div', { class: 'hud-center' }, mode.id === 'endless' ? null : h('div', { class: 'daybar', 'aria-hidden': 'true' }, fill, sun), h('div', { class: 'hud-sub' }, dayLabel, streak)),
       h('div', { class: 'hud-right' },
         h('div', { class: 'pill stats' },
           h('div', { class: 'stat score' }, score, h('small', {}, 'score')),
@@ -512,7 +513,10 @@ function updateHud() {
     hud!.fill.style.width = `calc(${pct}% - ${day * 6}px)`;
     hud!.sun.style.left = `calc(${pct}% + ${15 - day * 30}px)`;
   });
-  const label = r.mode.flowerGoal ? `🌼 ${Math.min(r.stats.flowers.length, r.mode.flowerGoal)} of ${r.mode.flowerGoal} flowers` : `${fmtTime(Math.ceil(r.timeLeft ?? 0))} left`;
+  const n = r.stats.flowers.length;
+  const label = r.mode.flowerGoal ? `🌼 ${Math.min(n, r.mode.flowerGoal)} of ${r.mode.flowerGoal} flowers`
+    : r.mode.duration ? `${fmtTime(Math.ceil(r.timeLeft ?? 0))} left`
+      : `🌈 ${n} flower${n === 1 ? '' : 's'} · ${fmtTime(Math.floor(r.time))}`;
   set('daylabel', label, (v) => (hud!.dayLabel.textContent = v));
   set('score', r.stats.score.toLocaleString(), (v) => (hud!.score.textContent = v));
   set('wpm', String(Math.round(r.wpm)), (v) => (hud!.wpm.textContent = v));
@@ -619,6 +623,7 @@ function togglePause() {
       h('p', { class: 'sub' }, 'Bumble is having a little rest 🐝'),
       h('div', { class: 'row', style: 'flex-direction:column' },
         btn('Keep going', 'mint big', togglePause, { 'data-autofocus': true }),
+        round.mode.id === 'endless' && round.stats.items > 0 ? btn('All done! 🌷', 'big', finishEndless) : null,
         btn('Leave the garden', 'ghost small', () => { paused = false; document.getElementById('pause')?.remove(); keyboard.setVisible(false); guideShown = false; round = null; capsEl?.remove(); capsEl = null; cheerEl?.remove(); cheerEl = null; showModes(); }),
       )));
     ui.append(el);
@@ -629,6 +634,12 @@ function togglePause() {
     if (touchOnly) focusTyping();
     lastKeyAt = performance.now();
   }
+}
+
+function finishEndless() {
+  if (!round) return;
+  togglePause();
+  round.finish();
 }
 
 // --------------------------------------------------------------- results --
