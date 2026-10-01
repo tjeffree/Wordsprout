@@ -4,7 +4,7 @@
 
 import { DEFAULT_SKILL, cpsGuessForLevel, type SkillState } from '../engine/adaptive';
 import type { FlowerKind } from '../art/flowers';
-import type { ModeId } from '../game/round';
+import { MODES, type ModeId } from '../game/round';
 
 const KEY = 'wordsprout.v1';
 
@@ -137,7 +137,7 @@ export const store = {
     const ranked = this.leaderboard(e.mode, 'score', 1000);
     // Keep the board tidy: top 50 per mode.
     const keep = new Set<ScoreEntry>();
-    for (const m of ['ten', 'stroll', 'sunny', 'summer'] as ModeId[]) {
+    for (const { id: m } of MODES) {
       for (const s of this.leaderboard(m, 'score', 50)) keep.add(s);
       for (const s of this.leaderboard(m, 'wpm', 50)) keep.add(s);
     }

@@ -48,7 +48,7 @@ Leaderboards and gardeners live in each visitor's own browser (localStorage).
 | **🐣 Little Words** | A per-gardener toggle: only 2, 3 and 4 letter lowercase words, many with a picture emoji. Special names such as *nova* 🌟 pop up now and then. |
 | **🔡 No capitals** | A per-gardener toggle that turns every game, sentences included, into lowercase. It's on by default for beginners. |
 | **Weak-key practice** | Per-key error tracking (with decay) biases letters and words toward the keys you miss and the keys you just unlocked. |
-| **Four games** | *Ten Flowers* (no clock), *Morning Stroll* (1 min), *Sunny Day* (2 min), *Long Summer* (5 min). The sun travels across the sky to sunset as the round goes on. |
+| **Five games** | *Ten Flowers* (no clock), *Morning Stroll* (1 min), *Sunny Day* (2 min), *Long Summer* (5 min), *Forever Garden* (endless: pause and choose *All done!* to finish). The sun travels across the sky to sunset as the round goes on; in Forever Garden it drifts gently and never sets. |
 | **Golden dandelions** | Now and then a glowing golden puff drifts by, worth double points and guaranteed to grow a rare flower. Bumble cheers on streaks. |
 | **Local leaderboard** | The "Garden of Fame": per game, by score or by speed, with medals, your own rows highlighted, and personal-best badges. Several gardeners can share one computer. |
 | **Collection** | 11 flower kinds with rarities, from sprout to rainbow bloom. Streaks raise the odds of rare blooms. Each gardener keeps a collection of the kinds they've discovered. |
