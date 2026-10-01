@@ -1,0 +1,21 @@
+{
+  "name": "wordsprout",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wordsprout: a whimsical, adaptive typing garden.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --port 4173 --strictPort",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.3"
+  }
+}

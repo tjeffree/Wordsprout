@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wordsprout sound lab</title>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #fff8ec; color: #3d2c4e; margin: 0; padding: 24px; }
+      h1 { margin-top: 0; }
+      #buttons { display: flex; flex-wrap: wrap; gap: 8px; max-width: 760px; }
+      button { background: #b99cff; color: #fff; border: 0; border-radius: 14px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
+      button:hover { background: #a283f0; }
+      .row { margin: 16px 0; display: flex; gap: 20px; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <h1>Wordsprout sound lab</h1>
+    <div class="row">
+      <label>Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+      <label><input id="mute" type="checkbox" /> mute</label>
+      <label><input id="music" type="checkbox" checked /> music enabled</label>
+    </div>
+    <div id="buttons"></div>
+    <script type="module" src="./sound.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,72 @@
+{
+  "orchestrator": {
+    "model": "claude-opus-5-5",
+    "subagentsLaunchedAt": "2026-10-01T09:29:15"
+  },
+  "subagents": [
+    {
+      "task": "On-screen keyboard component (src/ui/keyboard.ts/.css)",
+      "model": "sonnet-5.5",
+      "tokens": 62360,
+      "toolUses": 16,
+      "durationMs": 169335,
+      "batch": 1
+    },
+    {
+      "task": "WebAudio sound engine (src/audio/sound.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 52537,
+      "toolUses": 13,
+      "durationMs": 169726,
+      "batch": 1
+    },
+    {
+      "task": "Bee, dandelion puff, seed, butterfly, sparkle art (src/art/characters.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 71123,
+      "toolUses": 23,
+      "durationMs": 205658,
+      "batch": 1
+    },
+    {
+      "task": "Curated kid-safe word library (src/engine/words.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 64009,
+      "toolUses": 14,
+      "durationMs": 259328,
+      "batch": 1
+    },
+    {
+      "task": "Procedural flowers, 11 kinds with growth animation (src/art/flowers.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 123164,
+      "toolUses": 33,
+      "durationMs": 575851,
+      "batch": 1
+    },
+    {
+      "task": "Storybook scenery: sky, sun, clouds, hills, cottage, garden bed, rainbow (src/art/scenery.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 108503,
+      "toolUses": 42,
+      "durationMs": 581643,
+      "batch": 1
+    },
+    {
+      "task": "Objective sound-mix audit and tuning via output tap (src/audio/sound.ts)",
+      "model": "sonnet-5.5",
+      "tokens": 65456,
+      "toolUses": 13,
+      "durationMs": 512293,
+      "batch": 2
+    },
+    {
+      "task": "Bug-hunt code review with live repros (read-only)",
+      "model": "sonnet-5.5",
+      "tokens": 145177,
+      "toolUses": 37,
+      "durationMs": 571065,
+      "batch": 3
+    }
+  ]
+}

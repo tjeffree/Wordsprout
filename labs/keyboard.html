@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keyboard lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: 'Fredoka', system-ui, sans-serif;
+    background: linear-gradient(#8fc8ff, #cfe6ff 55%, #ffe3c9 80%, #a8d672 80.1%, #86c25a);
+    overflow: hidden;
+  }
+  #stage { position: fixed; inset: 0; }
+  #word { position: absolute; top: 12vh; width: 100%; text-align: center; font-size: 8vw; color: #3d2c4e; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="word"></div></div>
+<script type="module" src="./keyboard.ts"></script>
+</body>
+</html>

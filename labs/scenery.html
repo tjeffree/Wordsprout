@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scenery lab</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe6ff; font-family: system-ui, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #ui {
+      position: fixed; left: 8px; top: 8px; padding: 6px 10px; border-radius: 12px;
+      background: rgba(255, 255, 255, 0.75); color: #3d2c4e; font-size: 13px;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap; max-width: calc(100vw - 32px);
+    }
+    #ui input[type=range] { width: 140px; }
+    #fps { min-width: 64px; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <label>day <input id="day" type="range" min="0" max="1" step="0.005" value="0" /> <span id="dayv">0</span></label>
+    <label><input id="rb" type="checkbox" /> rainbow</label>
+    <label><input id="anim" type="checkbox" checked /> animate day</label>
+    <span id="fps">-- fps</span>
+  </div>
+  <script type="module" src="./scenery.ts"></script>
+</body>
+</html>
