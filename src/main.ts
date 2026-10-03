@@ -182,7 +182,7 @@ function onChar(ch: string) {
 }
 
 window.addEventListener('keydown', (e) => {
-  sound.unlock();
+  sound.unlock(); speech.unlock();
   const key = typeof e.key === 'string' ? e.key : '';
   // iOS on-screen keyboards send real keys too, so only count keys typed while it's closed.
   if (key.length === 1 && touchOnly && !softKeyboardUp()) touchOnly = false; // a hardware keyboard exists
@@ -245,7 +245,7 @@ function sayAgain() {
   const p = round?.spelling ? round.puffs.find((q) => q.hidden && q.state === 'fly') : null;
   if (p) speech.say(p.text);
 }
-window.addEventListener('pointerdown', () => sound.unlock(), { capture: true });
+window.addEventListener('pointerdown', () => { sound.unlock(); speech.unlock(); }, { capture: true });
 
 // Title-screen play-along: the scene reacts to the pointer (see Renderer).
 const scenePoint = (e: PointerEvent) => {
@@ -517,7 +517,7 @@ function startRound(mode: Mode) {
   const p = store.current;
   if (!p) return;
   stopAttract();
-  sound.unlock();
+  sound.unlock(); speech.unlock();
   if (touchDevice) focusTyping();
   renderer.clearGarden();
   round = new Round(p.skill, mode, Math.random, { little: littleOpts(p), noCaps: !!p.noCaps, spelling: SPELLING_WORDS });
