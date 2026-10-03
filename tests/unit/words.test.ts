@@ -1,4 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { ContentPicker, SHORT, MEDIUM, LONG } from '../../src/engine/content';
+import { LEVELS } from '../../src/engine/levels';
+import { rng } from '../../src/art/palette';
+import bank from '../../src/engine/spelling-bank.json';
+import week from '../../src/engine/spelling.json';
 import {
   LETTER_STAGES,
   PICTURE_WORDS,
@@ -72,5 +77,23 @@ describe('words library', () => {
     noDupes(SENTENCES);
     expect(bad(SENTENCES, (s) => /^[A-Z][A-Za-z ,'-]*[.!?]$/.test(s))).toEqual([]);
     expect(bad(SENTENCES, (s) => { const n = s.split(' ').length; return n >= 4 && n <= 10; })).toEqual([]);
+  });
+});
+
+describe('spelling words in the other games', () => {
+  it('every spelling word so far is in a word list that fits its length', () => {
+    for (const w of bank.words) {
+      const pool = w.length <= 4 ? SHORT : w.length <= 6 ? MEDIUM : LONG;
+      expect(pool, w).toContain(w);
+    }
+    for (const w of week.words) expect(bank.words, w.word).toContain(w.word);
+  });
+
+  it("this week's words come up often in ordinary games", () => {
+    const p = new ContentPicker(rng(4));
+    const seen = new Set<string>();
+    for (let i = 0; i < 400; i++) seen.add(p.next(LEVELS[14]).text);
+    const fits = week.words.map((w) => w.word).filter((w) => w.length <= 6);
+    expect(fits.filter((w) => seen.has(w))).toEqual(fits);
   });
 });

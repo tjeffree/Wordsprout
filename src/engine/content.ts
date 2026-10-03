@@ -3,14 +3,28 @@
 
 import { CAPITAL_WORDS, LETTER_STAGES, LONG_WORDS, MEDIUM_WORDS, PHRASES, PICTURE_WORDS, SENTENCES, SHORT_WORDS } from './words';
 import type { ContentKind, Level } from './levels';
+import bank from './spelling-bank.json';
+import week from './spelling.json';
 
 export interface Item { text: string; emoji?: string; kind: ContentKind }
 
 export interface LittleOpts { names: string[] }
 
+/** Every school spelling word so far: they join the word lists by length. */
+const BANK = bank.words.filter((w) => /^[a-z]{2,}$/.test(w));
+const withSpelling = (list: string[], min: number, max: number) =>
+  [...new Set([...list, ...BANK.filter((w) => w.length >= min && w.length <= max)])];
+export const SHORT: string[] = withSpelling(SHORT_WORDS, 2, 4);
+export const MEDIUM: string[] = withSpelling(MEDIUM_WORDS, 5, 6);
+export const LONG: string[] = withSpelling(LONG_WORDS, 7, Infinity);
+
+/** This week's spelling words turn up more often, so they get extra practice. */
+export const THIS_WEEK: string[] = week.words.map((w) => w.word);
+const WEEK_CHANCE = 0.2;
+
 /** Every 2–4 letter, all-lowercase word we have. */
 export const LITTLE_WORDS: string[] = [...new Set([
-  ...SHORT_WORDS.filter((w) => /^[a-z]{2,4}$/.test(w)),
+  ...SHORT.filter((w) => /^[a-z]{2,4}$/.test(w)),
   ...PICTURE_WORDS.map((w) => w.text),
   'nova',
 ])];
@@ -75,6 +89,8 @@ export class ContentPicker {
       return e ? { text: e.text, emoji: e.emoji, kind } : null;
     }
     const pool = this.poolFor(kind, level);
+    const spelling = this.pickThisWeek(pool, avoid);
+    if (spelling) return { text: spelling, kind };
     const filtered = pool.filter((t) => !avoid.has(t[0].toLowerCase()) && !this.recent.includes(t));
     const text = this.weighted(filtered.length ? filtered : pool, (t) => t, weak, focus);
     return text ? { text, kind } : null;
@@ -83,14 +99,21 @@ export class ContentPicker {
   private poolFor(kind: ContentKind, level: Level): string[] {
     switch (kind) {
       case 'homerow': return this.homerowWords(level.letterStage);
-      case 'short': return SHORT_WORDS;
-      case 'medium': return MEDIUM_WORDS;
-      case 'long': return LONG_WORDS;
+      case 'short': return SHORT;
+      case 'medium': return MEDIUM;
+      case 'long': return LONG;
       case 'capital': return CAPITAL_WORDS;
       case 'phrase': return PHRASES;
       case 'sentence': return SENTENCES;
-      default: return SHORT_WORDS;
+      default: return SHORT;
     }
+  }
+
+  /** Now and then, one of this week's spelling words that belongs in this pool and hasn't come up lately. */
+  private pickThisWeek(pool: string[], avoid: Set<string>): string | null {
+    if (this.rand() >= WEEK_CHANCE) return null;
+    const picks = THIS_WEEK.filter((t) => pool.includes(t) && !avoid.has(t[0]) && !this.recent.includes(t));
+    return picks.length ? picks[Math.floor(this.rand() * picks.length)] : null;
   }
 
   /**
@@ -111,6 +134,8 @@ export class ContentPicker {
       const e = this.weighted(pool.length ? pool : PICTURE_WORDS, (w) => w.text, weak, []);
       if (e) return { text: e.text, emoji: e.emoji, kind: 'picture' };
     }
+    const spelling = this.pickThisWeek(LITTLE_WORDS, avoid);
+    if (spelling) return { text: spelling, kind: 'short' };
     const pool = LITTLE_WORDS.filter((t) => !avoid.has(t[0]) && !this.recent.includes(t));
     const text = this.weighted(pool.length ? pool : LITTLE_WORDS, (t) => t, weak, []) ?? 'sun';
     return { text, kind: 'short' };
@@ -121,7 +146,7 @@ export class ContentPicker {
     let c = this.homerowCache.get(stage);
     if (!c) {
       const ok = new Set(unlockedLetters(stage));
-      c = SHORT_WORDS.filter((w) => w.length >= 2 && w.length <= 4 && [...w].every((ch) => ok.has(ch)));
+      c = SHORT.filter((w) => w.length >= 2 && w.length <= 4 && [...w].every((ch) => ok.has(ch)));
       this.homerowCache.set(stage, c);
     }
     return c;

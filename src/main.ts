@@ -421,19 +421,25 @@ function showModes() {
   startAttract();
   const p = store.current;
   if (!p) return showProfiles();
-  let mode: ModeId = p.preferredMode;
-  const lv = getLevel(p.skill.level);
-  const modes = h('div', { class: 'modes rise-in', role: 'group', 'aria-label': 'Choose a game' });
-  const paint = () => modes.querySelectorAll<HTMLButtonElement>('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === mode)));
-  const games = MODES.filter((m) => m.id !== 'spelling' || SPELLING_WORDS.length);
+  // This week's Spelling Bee comes first and is picked to start with, so it's the first thing to play.
+  const games = [...MODES].sort((a, b) => +(b.id === 'spelling') - +(a.id === 'spelling'))
+    .filter((m) => m.id !== 'spelling' || SPELLING_WORDS.length);
+  let mode: ModeId = games[0].id === 'spelling' ? 'spelling' : p.preferredMode;
   if (!games.some((m) => m.id === mode)) mode = games[0].id;
+  const lv = getLevel(p.skill.level);
+  const grid = h('div', { class: 'modes' });
+  const modes = h('div', { class: 'rise-in', role: 'group', 'aria-label': 'Choose a game' });
+  const paint = () => modes.querySelectorAll<HTMLButtonElement>('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === mode)));
   for (const m of games) {
     const best = store.leaderboard(m.id, 'score', 1000).find((s) => s.profileId === p.id);
-    const detail = m.id === 'spelling' ? `Listen to this week’s ${SPELLING_WORDS.length} words and spell them.` : m.detail;
-    modes.append(h('button', { class: 'mode', type: 'button', 'data-id': m.id, onclick: () => { mode = m.id; paint(); sound.uiHover(); }, ondblclick: () => go() },
-      h('span', { class: 'e' }, m.emoji), h('b', {}, m.name), h('small', {}, detail),
-      best ? h('span', { class: 'best' }, `Best: ${best.score.toLocaleString()}`) : null));
+    const spell = m.id === 'spelling';
+    const detail = spell ? `Listen to this week’s ${SPELLING_WORDS.length} words and spell them.` : m.detail;
+    const text = [h('b', {}, m.name), h('small', {}, detail), best ? h('span', { class: 'best' }, `Best: ${best.score.toLocaleString()}`) : null];
+    const b = h('button', { class: spell ? 'mode spell' : 'mode', type: 'button', 'data-id': m.id, onclick: () => { mode = m.id; paint(); sound.uiHover(); }, ondblclick: () => go() },
+      h('span', { class: 'e' }, m.emoji), spell ? h('span', { class: 'txt' }, ...text) : text);
+    (spell ? modes : grid).append(b);
   }
+  modes.append(grid);
   paint();
   const go = () => { p.preferredMode = mode; store.updateProfile(p); startRound(getMode(mode)); };
   const collection = h('div', { class: 'collection', 'aria-label': 'Flowers discovered' });
