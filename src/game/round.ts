@@ -160,6 +160,12 @@ export class Round {
   /** Spelling Bee: words spelled at least once. */
   get spellingDone(): number { return this.spelling ? this.spelling.results.filter((r) => !r.retry).length : 0; }
 
+  /** Spelling Bee: the tricky words that come back once at the end (done so far, and how many). */
+  get spellingRetries(): { done: number; total: number } {
+    const res = this.spelling?.results ?? [];
+    return { done: res.filter((r) => r.retry).length, total: res.filter((r) => !r.retry && (r.hinted || r.wrong >= 2)).length };
+  }
+
   get timeLeft(): number | null { return this.mode.duration ? Math.max(0, this.mode.duration - this.time) : null; }
 
   get wpm(): number { return this.stats.activeMs > 0 ? this.stats.wpmChars / 5 / (this.stats.activeMs / 60000) : 0; }

@@ -157,6 +157,7 @@ function handleEvents(events: RoundEvent[]) {
       case 'end': finishRound(); break;
       case 'spawn':
         if (e.puff.hidden) {
+          if (e.puff.retry && round.spellingRetries.done === 0) cheer('Let’s try the tricky ones again!');
           const word = e.puff.text;
           // Read it out as the puff floats in (and fetch the next one's clips).
           setTimeout(() => { if (round?.puffs.some((p) => p.text === word && p.state === 'fly') && !paused) speech.say(word, true); }, 500);
@@ -203,13 +204,24 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Touch keyboards: read text from the hidden input (keydown is often "Unidentified").
-const flushInput = () => {
+// Android keyboards hold letters in a "composition" until the word is done, so take each
+// new letter as it appears and only clear the field once the composition has finished.
+let composing = false;
+let consumed = '';
+const takeInput = (e?: Event) => {
   const v = typeInput.value;
-  typeInput.value = '';
-  for (const ch of v) onChar(ch);
+  const type = (e as InputEvent | undefined)?.inputType ?? '';
+  if (type.startsWith('delete')) {
+    if (screen === 'play' && !paused) round?.release();
+  } else if (v.startsWith(consumed)) {
+    for (const ch of v.slice(consumed.length)) onChar(ch);
+  }
+  consumed = v;
+  if (!composing) { typeInput.value = ''; consumed = ''; }
 };
-typeInput.addEventListener('input', (e) => { if (!(e as InputEvent).isComposing) flushInput(); });
-typeInput.addEventListener('compositionend', flushInput);
+typeInput.addEventListener('compositionstart', () => { composing = true; });
+typeInput.addEventListener('compositionend', () => { composing = false; takeInput(); });
+typeInput.addEventListener('input', takeInput);
 
 canvas.addEventListener('pointerdown', () => {
   sound.unlock();
@@ -543,7 +555,9 @@ function updateHud() {
     hud!.sun.style.left = `calc(${pct}% + ${15 - day * 30}px)`;
   });
   const n = r.stats.flowers.length;
-  const label = r.spelling ? `🐝 ${r.spellingDone} of ${r.spelling.total} words`
+  const tricky = r.spelling && r.spellingDone >= r.spelling.total ? r.spellingRetries : null;
+  const label = tricky?.total ? `🐝 Tricky words: ${Math.min(tricky.done + 1, tricky.total)} of ${tricky.total}`
+    : r.spelling ? `🐝 ${r.spellingDone} of ${r.spelling.total} words`
     : r.mode.flowerGoal ? `🌼 ${Math.min(n, r.mode.flowerGoal)} of ${r.mode.flowerGoal} flowers`
     : r.mode.duration ? `${fmtTime(Math.ceil(r.timeLeft ?? 0))} left`
       : `🌈 ${n} flower${n === 1 ? '' : 's'} · ${fmtTime(Math.floor(r.time))}`;

@@ -99,6 +99,44 @@ test('Spelling Bee reads each word aloud and lists the words at the end', async 
   expect(errors).toEqual([]);
 });
 
+test('Spelling Bee labels the tricky words that come back at the end', async ({ page }) => {
+  test.setTimeout(120_000);
+  await fresh(page);
+  await newGardener(page, 'Nova', 'sprout');
+  await page.locator('.mode[data-id="spelling"]').click();
+  await page.getByRole('button', { name: /^Start/ }).click();
+  await expect.poll(() => page.evaluate(() => !!window.__game.round.puffs.find((p: any) => p.hidden))).toBe(true);
+  // Two wrong letters on the first word: it comes back once at the end.
+  const first: string = await page.evaluate(() => window.__game.round.nextChar);
+  const wrong = first === 'z' ? 'x' : 'z';
+  await page.keyboard.press(wrong);
+  await page.keyboard.press(wrong);
+  const total: number = await page.evaluate(() => window.__game.round.spelling.total);
+  while ((await page.evaluate(() => window.__game.round.spellingDone)) < total) await typeNext(page, 1, 100);
+  await expect(page.locator('.hud')).toContainText('Tricky words: 1 of 1');
+});
+
+test('touch keyboards that compose words still type letter by letter', async ({ page }) => {
+  await fresh(page);
+  await newGardener(page, 'Tester', 'bloom');
+  await page.locator('.mode[data-id="stroll"]').click();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__game.round?.nextChar);
+  await page.locator('#type-input').focus();
+  // Like Gboard: each letter grows an in-progress composition instead of sending a key.
+  const cdp = await page.context().newCDPSession(page);
+  let text = '';
+  for (let i = 1; i <= 3; i++) {
+    text += await page.evaluate(() => window.__game.round.nextChar);
+    await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length });
+    await expect.poll(() => page.evaluate(() => window.__game.round.stats.correct)).toBe(i);
+  }
+  await cdp.send('Input.insertText', { text }); // the keyboard commits the word
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.__game.round.stats.correct)).toBe(3);
+  expect(await page.evaluate(() => window.__game.round.stats.wrong ?? 0)).toBe(0);
+});
+
 test('wrong keys do not advance and lower accuracy', async ({ page }) => {
   await fresh(page);
   await newGardener(page, 'Tester', 'bloom');
