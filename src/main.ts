@@ -36,7 +36,10 @@ let screen: Screen = 'title';
 let round: Round | null = null;
 let attract: { round: Round; bot: Bot } | null = null;
 let paused = false;
-let touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
+// Phones and tablets: the on-screen keyboard only opens when the hidden input is focused.
+const touchDevice = matchMedia('(pointer: coarse)').matches;
+// No hardware keyboard seen yet: hide key hints and the keyboard helper.
+let touchOnly = touchDevice;
 let lastKeyAt = performance.now();
 let hint: HTMLElement | null = null;
 
@@ -181,7 +184,8 @@ function onChar(ch: string) {
 window.addEventListener('keydown', (e) => {
   sound.unlock();
   const key = typeof e.key === 'string' ? e.key : '';
-  if (key.length === 1 && touchOnly) touchOnly = false; // a hardware keyboard exists
+  // iOS on-screen keyboards send real keys too, so only count keys typed while it's closed.
+  if (key.length === 1 && touchOnly && !softKeyboardUp()) touchOnly = false; // a hardware keyboard exists
   const target = e.target as HTMLElement | null;
   const onButton = !!target?.closest?.('button:not(.mode)'); // a selected game card + Enter = start
   if (screen === 'play') {
@@ -229,6 +233,12 @@ canvas.addEventListener('pointerdown', () => {
   if (screen === 'play') focusTyping();
   if (screen === 'play' && !paused) sayAgain();
 });
+// iOS only opens its keyboard reliably from a click, so focus again once the tap ends.
+window.addEventListener('click', (e) => {
+  if (screen !== 'play' || paused || !touchDevice) return;
+  if ((e.target as HTMLElement | null)?.closest?.('button, input, a')) return;
+  focusTyping();
+});
 
 /** Spelling Bee: hear the current word again (Enter, the 🔊 button, or a tap on the sky). */
 function sayAgain() {
@@ -261,6 +271,13 @@ renderer.onFun = (what) => {
 
 function focusTyping() {
   typeInput.focus({ preventScroll: true });
+}
+
+/** Is a phone or tablet's on-screen keyboard open? It squashes the visible part of the page. */
+function softKeyboardUp() {
+  if (!touchDevice || document.activeElement !== typeInput) return false;
+  const vv = window.visualViewport;
+  return !vv || vv.height < window.innerHeight * 0.85 || vv.height < window.screen.availHeight * 0.7;
 }
 
 window.addEventListener('blur', () => { if (screen === 'play' && !paused && round?.phase === 'play') togglePause(); });
@@ -441,7 +458,7 @@ function showModes() {
       btn('🏆', 'ghost', () => showBoard('modes'), { 'aria-label': 'Leaderboard', title: 'Leaderboard' }),
       btn('⚙️', 'ghost', () => showSettings('modes'), { 'aria-label': 'Settings', title: 'Settings' }),
     ),
-    h('p', { class: 'keytip' }, touchOnly ? 'Tip: tap the sky to bring up your keyboard.' : h('span', {}, 'Press ', h('kbd', {}, 'Enter'), ' to start · ', h('kbd', {}, 'Esc'), ' pauses during play')),
+    h('p', { class: 'keytip' }, touchDevice ? 'Tip: tap the sky to bring up your keyboard.' : h('span', {}, 'Press ', h('kbd', {}, 'Enter'), ' to start · ', h('kbd', {}, 'Esc'), ' pauses during play')),
   ));
   show(el, 'modes', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); go(); }
@@ -501,7 +518,7 @@ function startRound(mode: Mode) {
   if (!p) return;
   stopAttract();
   sound.unlock();
-  if (touchOnly) focusTyping();
+  if (touchDevice) focusTyping();
   renderer.clearGarden();
   round = new Round(p.skill, mode, Math.random, { little: littleOpts(p), noCaps: !!p.noCaps, spelling: SPELLING_WORDS });
   if (round.spelling) speech.preload(round.spelling.queue[0].word);
@@ -527,6 +544,7 @@ function startRound(mode: Mode) {
           h('div', { class: 'stat' }, wpm, h('small', {}, 'wpm')),
           h('div', { class: 'stat acc' }, acc, h('small', {}, 'accuracy'))),
         round.spelling ? iconBtn('sound', 'Hear the word again (Enter)', sayAgain) : null,
+        touchDevice ? iconBtn('keyboard', 'Show the keyboard', focusTyping) : null,
         iconBtn('pause', 'Pause', togglePause)),
     ),
   );
@@ -586,7 +604,9 @@ let lastHighlight: string | null | undefined;
 function updateGuide(force = false) {
   if (!round) return;
   const s = store.settings.keyboard;
-  const want = !touchOnly && (s === 'on' || (s === 'auto' && round.level.guide)) && round.phase === 'play';
+  // Never alongside the device's own keyboard, and in "auto" only when the sky has room for it.
+  const room = s === 'on' || renderer.layout.h >= 560;
+  const want = !touchOnly && !softKeyboardUp() && room && (s === 'on' || (s === 'auto' && round.level.guide)) && round.phase === 'play';
   if (want !== guideShown || force) {
     guideShown = want;
     keyboard.setVisible(want);
@@ -671,14 +691,14 @@ function togglePause() {
       h('div', { class: 'row', style: 'flex-direction:column' },
         btn('Keep going', 'mint big', togglePause, { 'data-autofocus': true }),
         round.mode.id === 'endless' && round.stats.items > 0 ? btn('All done! 🌷', 'big', finishEndless) : null,
-        btn('Leave the garden', 'ghost small', () => { paused = false; document.getElementById('pause')?.remove(); keyboard.setVisible(false); guideShown = false; round = null; capsEl?.remove(); capsEl = null; cheerEl?.remove(); cheerEl = null; showModes(); }),
+        btn('Leave the garden', 'ghost small', () => { paused = false; typeInput.blur(); document.getElementById('pause')?.remove(); keyboard.setVisible(false); guideShown = false; round = null; capsEl?.remove(); capsEl = null; cheerEl?.remove(); cheerEl = null; showModes(); }),
       )));
     ui.append(el);
     setTimeout(() => el.querySelector<HTMLElement>('[data-autofocus]')?.focus(), 30);
   } else {
     document.getElementById('pause')?.remove();
     if (round.spelling) sayAgain(); else sound.startMusic();
-    if (touchOnly) focusTyping();
+    if (touchDevice) focusTyping();
     lastKeyAt = performance.now();
   }
 }

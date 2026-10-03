@@ -320,3 +320,24 @@ test('touch keyboards (input events) can play @mobile', async ({ page }) => {
   }
   expect(await page.evaluate(() => window.__game.round.stats.correct)).toBe(8);
 });
+
+test('phones and tablets open their keyboard and never show the helper over it @mobile', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'needs a touch screen');
+  await fresh(page);
+  await page.evaluate(() => { const g = window.__game; g.store.createProfile('Thumbs', '🐢', 1); g.startRound('stroll'); });
+  await page.waitForFunction(() => window.__game.round?.nextChar);
+  await expect(page.locator('#type-input')).toBeFocused();
+  // iOS on-screen keyboards send real keydowns while squashing the visible page.
+  await page.evaluate(() => Object.defineProperty(window.visualViewport, 'height', { get: () => window.innerHeight * 0.55 }));
+  for (let i = 0; i < 3; i++) {
+    const ch = await page.evaluate(() => window.__game.round.nextChar);
+    if (ch) await page.keyboard.press(ch);
+    await page.waitForTimeout(80);
+  }
+  await page.waitForTimeout(200);
+  await expect(page.locator('.kb-root:not(.kb-hidden)')).toHaveCount(0);
+  // The HUD's keyboard button brings the keyboard back after it's dismissed.
+  await page.locator('#type-input').blur();
+  await page.getByRole('button', { name: 'Show the keyboard' }).click();
+  await expect(page.locator('#type-input')).toBeFocused();
+});
