@@ -13,8 +13,12 @@ one per line). To update the game:
    6-year-old in the UK would understand, using British spelling and vocabulary (pyjamas, mum).
    Words must be letters only.
 2. `npm run spelling` (edge-tts, en-GB-SoniaNeural, needs internet; the user is happy with this voice).
-3. `npm test` (checks every word has `public/spelling/<word>.mp3` and `<word>-say.mp3`).
-4. Commit `spelling/`, `public/spelling/` and `src/engine/spelling.json`, then push when asked.
+   It also adds any new words to `src/engine/spelling-bank.json`, so they turn up in the other
+   games too (past weeks' words stay; this week's come up more often).
+3. `npm test` (checks every word has `public/spelling/<word>.mp3` and `<word>-say.mp3`,
+   and that every spelling word is in the other games' word lists).
+4. Commit `spelling/`, `public/spelling/`, `src/engine/spelling.json` and
+   `src/engine/spelling-bank.json`, then push when asked.
 
 ## Conventions
 

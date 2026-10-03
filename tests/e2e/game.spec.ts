@@ -64,7 +64,10 @@ test('a little learner grows ten flowers and lands on the leaderboard', async ({
   const errors = watchErrors(page);
   await fresh(page);
   await newGardener(page, 'Pip', 'sprout');
-  await page.keyboard.press('Enter');
+  // This week's Spelling Bee is picked to start with.
+  await expect(page.locator('.mode.spell')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.mode[data-id="ten"]').click();
+  await page.getByRole('button', { name: /^Start/ }).click();
   await expect(page.locator('.hud')).toBeVisible();
   // Keyboard guide is shown for beginners.
   await expect(page.locator('.kb-root:not(.kb-hidden)')).toBeVisible();
@@ -207,7 +210,8 @@ test('Little Words only shows 2-4 letter lowercase words', async ({ page }) => {
   await page.getByRole('button', { name: /let.s play/i }).click();
   await page.locator('.pcard', { hasText: 'Nova' }).click();
   await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'true');
-  await page.keyboard.press('Enter');
+  await page.locator('.mode[data-id="ten"]').click();
+  await page.getByRole('button', { name: /^Start/ }).click();
   const seen = new Set<string>();
   for (let i = 0; i < 12; i++) {
     for (const t of await page.evaluate(() => window.__game.round.puffs.map((p: any) => p.text))) seen.add(t);
@@ -225,6 +229,7 @@ test('No capitals toggle makes a speedy game all lowercase', async ({ page }) =>
   await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'false');
   await page.evaluate(() => { const g = window.__game; const p = g.store.current; p.skill.level = 21; g.store.updateProfile(p); });
   // Enter on a focused toggle flips it (native button behaviour), so start with the button.
+  await page.locator('.mode[data-id="stroll"]').click();
   await page.getByRole('button', { name: /^Start/ }).click();
   await page.waitForFunction(() => window.__game.round?.puffs);
   const seen = new Set<string>();

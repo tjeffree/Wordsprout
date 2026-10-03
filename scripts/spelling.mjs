@@ -3,11 +3,13 @@
 //   public/spelling/<word>.mp3       the word on its own (for "hear it again")
 //   public/spelling/<word>-say.mp3   word, sentence, word (like a spelling test)
 //   src/engine/spelling.json         the list the game imports
+// and adds any new words to src/engine/spelling-bank.json, which feeds the
+// other games' word lists.
 //
 // Usage: npm run spelling            (needs Python with: pip install edge-tts)
 // Env:   SPELLING_VOICE=en-GB-LibbyNeural to try another voice.
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -51,3 +53,11 @@ for (const { word, sentence } of words) {
 
 writeFileSync(join(root, 'src', 'engine', 'spelling.json'), JSON.stringify({ voice, words }, null, 2) + '\n');
 console.log(`\n${words.length} words ready for the Spelling Bee.`);
+
+// Every week's words also join the other games' word lists, and stay there.
+const bankFile = join(root, 'src', 'engine', 'spelling-bank.json');
+const bank = new Set(existsSync(bankFile) ? JSON.parse(readFileSync(bankFile, 'utf8')).words : []);
+const added = words.map((w) => w.word).filter((w) => !bank.has(w));
+for (const w of added) bank.add(w);
+writeFileSync(bankFile, JSON.stringify({ words: [...bank].sort() }, null, 2) + '\n');
+console.log(added.length ? `Added to the other games: ${added.join(', ')}.` : 'All of them are already in the other games.');

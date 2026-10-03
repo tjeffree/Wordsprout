@@ -1,4 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { ContentPicker, SHORT, MEDIUM, LONG } from '../../src/engine/content';
+import { LEVELS } from '../../src/engine/levels';
+import { rng } from '../../src/art/palette';
+import bank from '../../src/engine/spelling-bank.json';
+import week from '../../src/engine/spelling.json';
 import {
   LETTER_STAGES,
   PICTURE_WORDS,
@@ -72,5 +77,36 @@ describe('words library', () => {
     noDupes(SENTENCES);
     expect(bad(SENTENCES, (s) => /^[A-Z][A-Za-z ,'-]*[.!?]$/.test(s))).toEqual([]);
     expect(bad(SENTENCES, (s) => { const n = s.split(' ').length; return n >= 4 && n <= 10; })).toEqual([]);
+  });
+});
+
+describe('spelling words in the other games', () => {
+  it('every spelling word so far is in a word list that fits its length', () => {
+    for (const w of bank.words) {
+      const pool = w.length <= 4 ? SHORT : w.length <= 6 ? MEDIUM : LONG;
+      expect(pool, w).toContain(w);
+    }
+    for (const w of week.words) expect(bank.words, w.word).toContain(w.word);
+  });
+
+  it("from level 12, this week's words (any length) come up", () => {
+    const words = week.words.map((w) => w.word);
+    for (const lv of [LEVELS[11], LEVELS[14]]) {
+      const p = new ContentPicker(rng(4));
+      const seen = new Set<string>();
+      for (let i = 0; i < 400; i++) seen.add(p.next(lv).text);
+      expect(words.filter((w) => seen.has(w)), `level ${lv.id}`).toEqual(words);
+    }
+  });
+
+  it('levels 1-11 are unchanged: no spelling words', () => {
+    const original = new Set([...SHORT_WORDS, ...PICTURE_WORDS.map((w) => w.text)]);
+    for (const lv of LEVELS.slice(0, 11)) {
+      const p = new ContentPicker(rng(4));
+      for (let i = 0; i < 200; i++) {
+        const t = p.next(lv).text;
+        if (t.length > 1) expect(original.has(t), `level ${lv.id}: ${t}`).toBe(true);
+      }
+    }
   });
 });
