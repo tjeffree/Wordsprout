@@ -120,7 +120,6 @@ kbd { font: 600 0.85em var(--font); background: #fff; border-radius: 8px; paddin
 .title-actions { display: flex; flex-direction: column; gap: 16px; align-items: center; }
 .press-hint { margin-top: 16px; font-size: 16px; color: var(--ink-soft); background: rgba(255, 253, 248, 0.7); padding: 4px 14px; border-radius: 999px; }
 .corner { position: absolute; top: calc(14px + var(--safe-t)); right: 14px; display: flex; gap: 10px; }
-.credit { position: absolute; bottom: calc(10px + var(--safe-b)); right: 12px; font-size: 12.5px; color: var(--ink-soft); background: rgba(255, 253, 248, 0.8); padding: 4px 12px; border-radius: 999px; pointer-events: none !important; }
 
 /* ----------------------------------------------------------- profiles -- */
 .profiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }

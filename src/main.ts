@@ -331,7 +331,6 @@ function showTitle() {
     ),
     h('div', { class: 'press-hint' }, touchOnly ? 'Tap to begin' : h('span', {}, 'Press ', h('kbd', {}, 'Enter'), ' to begin')),
     h('div', { class: 'corner' }, soundToggle(), iconBtn('gear', 'Settings', () => showSettings('title'))),
-    h('div', { class: 'credit' }, 'Wordsprout · made with Claude Opus 5.5'),
   );
   show(el, 'title', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
 }
