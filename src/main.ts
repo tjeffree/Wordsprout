@@ -535,7 +535,7 @@ function startRound(mode: Mode) {
   const streak = h('div', { class: 'pill streak' }, '🌸 ', streakN, ' in a row!');
   const root = h('div', { class: 'hud fade-in' },
     h('div', { class: 'hud-top' },
-      h('div', { class: 'hud-left' }, h('div', { class: 'pill' }, h('span', { class: 'av' }, p.avatar), h('span', { class: 'nm' }, p.name)), lvl),
+      h('div', { class: 'hud-left' }, h('div', { class: 'pill who-pill' }, h('span', { class: 'av' }, p.avatar), h('span', { class: 'nm' }, p.name)), lvl),
       // Endless rounds have no day to get through, so no day bar.
       h('div', { class: 'hud-center' }, mode.id === 'endless' ? null : h('div', { class: 'daybar', 'aria-hidden': 'true' }, fill, sun), h('div', { class: 'hud-sub' }, dayLabel, streak)),
       h('div', { class: 'hud-right' },
