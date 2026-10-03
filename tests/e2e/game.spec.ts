@@ -229,6 +229,7 @@ test('No capitals toggle makes a speedy game all lowercase', async ({ page }) =>
   await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'false');
   await page.evaluate(() => { const g = window.__game; const p = g.store.current; p.skill.level = 21; g.store.updateProfile(p); });
   // Enter on a focused toggle flips it (native button behaviour), so start with the button.
+  await page.locator('.mode[data-id="stroll"]').click();
   await page.getByRole('button', { name: /^Start/ }).click();
   await page.waitForFunction(() => window.__game.round?.puffs);
   const seen = new Set<string>();

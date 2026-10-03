@@ -89,11 +89,24 @@ describe('spelling words in the other games', () => {
     for (const w of week.words) expect(bank.words, w.word).toContain(w.word);
   });
 
-  it("this week's words come up often in ordinary games", () => {
-    const p = new ContentPicker(rng(4));
-    const seen = new Set<string>();
-    for (let i = 0; i < 400; i++) seen.add(p.next(LEVELS[14]).text);
-    const fits = week.words.map((w) => w.word).filter((w) => w.length <= 6);
-    expect(fits.filter((w) => seen.has(w))).toEqual(fits);
+  it("from level 12, this week's words (any length) come up", () => {
+    const words = week.words.map((w) => w.word);
+    for (const lv of [LEVELS[11], LEVELS[14]]) {
+      const p = new ContentPicker(rng(4));
+      const seen = new Set<string>();
+      for (let i = 0; i < 400; i++) seen.add(p.next(lv).text);
+      expect(words.filter((w) => seen.has(w)), `level ${lv.id}`).toEqual(words);
+    }
+  });
+
+  it('levels 1-11 are unchanged: no spelling words', () => {
+    const original = new Set([...SHORT_WORDS, ...PICTURE_WORDS.map((w) => w.text)]);
+    for (const lv of LEVELS.slice(0, 11)) {
+      const p = new ContentPicker(rng(4));
+      for (let i = 0; i < 200; i++) {
+        const t = p.next(lv).text;
+        if (t.length > 1) expect(original.has(t), `level ${lv.id}: ${t}`).toBe(true);
+      }
+    }
   });
 });
