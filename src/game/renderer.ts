@@ -491,7 +491,7 @@ export class Renderer {
 
   /** Plant instantly (used to pre-fill the title-screen garden). */
   seedGarden(n: number) {
-    const kinds: FlowerKind[] = ['daisy', 'tulip', 'poppy', 'clover', 'bluebell', 'lavender', 'sunflower', 'rose', 'daisy', 'tulip', 'starbloom', 'clover'];
+    const kinds: FlowerKind[] = ['daisy', 'tulip', 'poppy', 'buttercup', 'bluebell', 'lavender', 'sunflower', 'pansy', 'rose', 'forgetmenot', 'starbloom', 'dahlia'];
     for (let i = 0; i < n; i++) {
       const s = this.pickSlot(rand(0.03, 0.97), 'daisy');
       if (s) this.garden.push({ nx: s.nx, row: s.row, kind: kinds[i % kinds.length], seed: i * 97 + 5, t0: -10, sway: 0, scale: rand(0.9, 1.08) });

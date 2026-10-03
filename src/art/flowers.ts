@@ -5,15 +5,15 @@
 import { PETALS, STEM, LEAF, SOIL, SOIL_DARK, clamp01, lerp, easeOutBack, easeOutCubic } from './palette';
 
 export type FlowerKind =
-  | 'sprout' | 'daisy' | 'tulip' | 'poppy' | 'bluebell' | 'clover'
-  | 'lavender' | 'sunflower' | 'rose' | 'starbloom' | 'rainbowbloom';
+  | 'sprout' | 'daisy' | 'tulip' | 'poppy' | 'bluebell' | 'clover' | 'buttercup' | 'forgetmenot'
+  | 'lavender' | 'sunflower' | 'pansy' | 'rose' | 'dahlia' | 'starbloom' | 'rainbowbloom';
 
 /** Rarity tier 0..4 (0 common → 4 legendary). */
 export const FLOWER_RARITY: Record<FlowerKind, number> = {
-  sprout: 0, daisy: 0, clover: 0,
-  tulip: 1, poppy: 1, bluebell: 1,
-  lavender: 2, sunflower: 2,
-  rose: 3,
+  sprout: 0, daisy: 0, clover: 0, buttercup: 0,
+  tulip: 1, poppy: 1, bluebell: 1, forgetmenot: 1,
+  lavender: 2, sunflower: 2, pansy: 2,
+  rose: 3, dahlia: 3,
   starbloom: 4, rainbowbloom: 4,
 };
 
@@ -596,6 +596,149 @@ function headRainbow(ctx: C, n: number): void {
   ctx.globalAlpha = 1;
 }
 
+function roundPetal(ctx: C, len: number, wid: number): void {
+  // broad petal with a fully rounded tip
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-wid * 0.9, -len * 0.15, -wid * 1.1, -len * 0.95, 0, -len);
+  ctx.bezierCurveTo(wid * 1.1, -len * 0.95, wid * 0.9, -len * 0.15, 0, 0);
+  ctx.closePath();
+}
+
+function headButtercup(ctx: C, st: Style): void {
+  const step = TAU / 5;
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  ctx.save();
+  ctx.fillStyle = gPg(ctx, st);
+  for (let i = 0; i < 5; i++) { ctx.rotate(step); roundPetal(ctx, 1, 0.56); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  // the famous buttercup shine
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) { ctx.rotate(step); ctx.ellipse(-0.14, -0.62, 0.09, 0.2, 0.2, 0, TAU); }
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
+  ctx.restore();
+  // stamen ring
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = i * TAU / 12, px = Math.cos(a) * 0.36, py = Math.sin(a) * 0.36;
+    ctx.moveTo(px + 0.06, py); ctx.arc(px, py, 0.06, 0, TAU);
+  }
+  ctx.fillStyle = '#e3a62c'; ctx.fill();
+  centreDisc(ctx, 0.27, '#f4ffb0', '#c9e06a', '#8fb83a', '#6e9a2a', 0);
+}
+
+// forget-me-not cluster: [x, y, radius] of each little flower, back to front
+const FMN = [[-0.25, -0.55, 0.34], [0.32, -0.55, 0.33], [-0.6, 0.15, 0.36], [0.58, 0.1, 0.37], [0, 0, 0.42]];
+function headForgetMeNot(ctx: C, st: Style): void {
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  // pink buds, as on the real thing
+  const bud = sty(PETALS.pink);
+  ctx.beginPath();
+  ctx.moveTo(-0.72, -0.42); ctx.arc(-0.84, -0.42, 0.12, 0, TAU);
+  ctx.moveTo(0.92, -0.48); ctx.arc(0.8, -0.48, 0.11, 0, TAU);
+  ctx.moveTo(0.1, -0.98); ctx.arc(0, -0.98, 0.1, 0, TAU);
+  ctx.fillStyle = bud.fill; ctx.fill();
+  ctx.strokeStyle = bud.stroke; ctx.stroke();
+  ctx.strokeStyle = st.stroke;
+  for (let f = 0; f < FMN.length; f++) {
+    const [fx, fy, r] = FMN[f];
+    ctx.save();
+    ctx.translate(fx, fy);
+    ctx.rotate(f * 0.7);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = i * TAU / 5, px = Math.cos(a) * r * 0.52, py = Math.sin(a) * r * 0.52;
+      ctx.moveTo(px + r * 0.46, py); ctx.arc(px, py, r * 0.46, 0, TAU);
+    }
+    ctx.fillStyle = st.fill; ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = i * TAU / 5, px = Math.cos(a) * r * 0.6 - r * 0.08, py = Math.sin(a) * r * 0.6 - r * 0.1;
+      ctx.moveTo(px + r * 0.13, py); ctx.arc(px, py, r * 0.13, 0, TAU);
+    }
+    ctx.fillStyle = rgba(st.pale, 0.85); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.24, 0, TAU);
+    ctx.fillStyle = '#ffe27a'; ctx.fill();
+    ctx.lineWidth = LW * 0.8; ctx.strokeStyle = '#e3a62c'; ctx.stroke();
+    ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.09, 0, TAU);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+// pansy colourways: [upper petals, lower "face" petals]
+const PANSY: readonly (readonly [Col, Col])[] = [
+  [VIOLET, PETALS.butter], [VIOLET, PETALS.white], [RASP, PETALS.butter], [PETALS.lilac, PETALS.white], [PERI, PETALS.butter],
+];
+const PANSY_BLOTCH = '#47305a';
+function headPansy(ctx: C, seed: number): void {
+  const [upCol, loCol] = pick(PANSY, seed, 6);
+  const up = sty(upCol), lo = sty(loCol);
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW;
+  // two big upper petals at the back
+  ctx.fillStyle = gDg(ctx, up); ctx.strokeStyle = up.stroke;
+  for (const a of [-0.45, 0.45]) { ctx.save(); ctx.rotate(a); roundPetal(ctx, 1, 0.62); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  // two side petals and the wide bottom petal make the face
+  ctx.fillStyle = gPg(ctx, lo); ctx.strokeStyle = lo.stroke;
+  for (const [a, len, wid] of [[-1.45, 0.84, 0.52], [1.45, 0.84, 0.52], [Math.PI, 0.9, 0.72]]) {
+    ctx.save(); ctx.rotate(a); roundPetal(ctx, len, wid); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  // dark blotch and whiskers on each face petal
+  ctx.save();
+  ctx.fillStyle = rgba(PANSY_BLOTCH, 0.85); ctx.strokeStyle = PANSY_BLOTCH;
+  ctx.lineWidth = LW * 0.8; ctx.lineCap = 'round';
+  for (const [a, k] of [[-1.45, 0.8], [1.45, 0.8], [Math.PI, 1]]) {
+    ctx.save(); ctx.rotate(a); ctx.scale(k, k);
+    ctx.beginPath(); ctx.ellipse(0, -0.26, 0.2, 0.26, 0, 0, TAU); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -0.1); ctx.lineTo(0, -0.62);
+    ctx.moveTo(0, -0.1); ctx.lineTo(-0.15, -0.56);
+    ctx.moveTo(0, -0.1); ctx.lineTo(0.15, -0.56);
+    ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  ctx.restore();
+  // glints on the upper petals
+  ctx.beginPath();
+  ctx.ellipse(-0.5, -0.66, 0.07, 0.17, -0.5, 0, TAU);
+  ctx.ellipse(0.32, -0.8, 0.06, 0.13, 0.5, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+  // little yellow eye
+  ctx.beginPath(); ctx.arc(0, 0, 0.11, 0, TAU);
+  ctx.fillStyle = '#ffe27a'; ctx.fill();
+  ctx.strokeStyle = '#c99a22'; ctx.lineWidth = LW * 0.8; ctx.stroke();
+}
+
+function headDahlia(ctx: C, st: Style): void {
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  // rings of pointed petals, each smaller, lighter and offset from the last
+  const rings = [[14, 1, 0.15, 0], [12, 0.76, 0.17, 0.5], [10, 0.54, 0.19, 0.2], [8, 0.34, 0.22, 0.6]];
+  for (let r = 0; r < rings.length; r++) {
+    const [n, sc, wid, off] = rings[r];
+    const step = TAU / n;
+    ctx.save();
+    ctx.scale(sc, sc);
+    ctx.lineWidth = LW / sc;
+    ctx.rotate(off);
+    ctx.fillStyle = r === 0 ? gDg(ctx, st) : gPg(ctx, st);
+    for (let i = 0; i < n; i++) { ctx.rotate(step); petalPath(ctx, 1, wid, 0.9); ctx.fill(); ctx.stroke(); }
+    // centre crease on each petal
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) { ctx.rotate(step); ctx.moveTo(0, -0.3); ctx.lineTo(0, -0.8); }
+    ctx.globalAlpha = 0.3; ctx.lineWidth = LW * 0.6 / sc; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  centreDisc(ctx, 0.12, '#fff3a8', '#ffd45c', '#e3a62c', '#c99a22', 0);
+  // glints
+  ctx.beginPath();
+  ctx.ellipse(-0.36, -0.62, 0.05, 0.15, -0.5, 0, TAU);
+  ctx.ellipse(-0.22, -0.4, 0.04, 0.1, -0.4, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
+}
+
 // ---------------------------------------------------------------- config
 interface KC { stem: number; r: number; spin: boolean }
 const CFG: Record<FlowerKind, KC> = {
@@ -605,6 +748,10 @@ const CFG: Record<FlowerKind, KC> = {
   poppy: { stem: 0.77, r: 0.22, spin: true },
   bluebell: { stem: 1.0, r: 0.12, spin: false },
   clover: { stem: 0.84, r: 0.15, spin: false },
+  buttercup: { stem: 0.8, r: 0.17, spin: true },
+  forgetmenot: { stem: 0.8, r: 0.23, spin: false },
+  pansy: { stem: 0.66, r: 0.25, spin: false },
+  dahlia: { stem: 0.78, r: 0.26, spin: true },
   lavender: { stem: 0.97, r: 0.1, spin: false },
   sunflower: { stem: 0.72, r: 0.28, spin: true },
   rose: { stem: 0.78, r: 0.21, spin: true },
@@ -620,6 +767,10 @@ const LEAVES: Record<FlowerKind, readonly number[][]> = {
   poppy: [[0.1, -1, 0.28, 0.15, 1.05, 0.14], [0.28, 1, 0.24, 0.14, 0.95, 0.12]],
   bluebell: [[0.01, -1, 0.5, 0.06, 0.35, 0.4], [0.02, 1, 0.44, 0.06, 0.6, 0.4], [0.02, -1, 0.34, 0.06, 0.85, 0.35]],
   clover: [],
+  buttercup: [[0.1, -1, 0.26, 0.16, 1.1, 0.14], [0.26, 1, 0.22, 0.15, 1.0, 0.12]],
+  forgetmenot: [[0.08, -1, 0.3, 0.11, 0.9, 0.2], [0.22, 1, 0.26, 0.1, 0.85, 0.18], [0.4, -1, 0.18, 0.09, 0.8, 0.14]],
+  pansy: [[0.04, -1, 0.3, 0.2, 1.0, 0.16], [0.08, 1, 0.27, 0.19, 0.95, 0.14]],
+  dahlia: [[0.16, -1, 0.26, 0.17, 1.05, 0.14], [0.34, 1, 0.24, 0.16, 0.95, 0.12], [0.5, -1, 0.17, 0.14, 0.85, 0.1]],
   lavender: [[0.02, -1, 0.34, 0.06, 0.4, 0.3], [0.03, 1, 0.3, 0.06, 0.55, 0.3], [0.08, -1, 0.22, 0.05, 0.85, 0.25], [0.1, 1, 0.2, 0.05, 0.75, 0.25]],
   sunflower: [[0.18, -1, 0.3, 0.2, 1.1, 0.12], [0.34, 1, 0.28, 0.2, 1.0, 0.1], [0.5, -1, 0.2, 0.17, 0.95, 0.1]],
   rose: [[0.18, -1, 0.2, 0.13, 1.05, 0.14], [0.38, 1, 0.19, 0.13, 0.9, 0.12], [0.55, -1, 0.14, 0.12, 0.8, 0.1]],
@@ -634,6 +785,10 @@ function kindColor(kind: FlowerKind, seed: number): Col {
     case 'poppy': return pick([RED, PETALS.coral, RED], seed, 5);
     case 'bluebell': return pick([PERI, PETALS.sky, PETALS.lilac], seed, 5);
     case 'clover': return hr(seed, 5) < 0.75 ? PETALS.pink : PETALS.lilac;
+    case 'buttercup': return PETALS.butter;
+    case 'forgetmenot': return pick([PETALS.sky, PETALS.sky, PERI], seed, 5);
+    case 'pansy': return pick(PANSY, seed, 6)[0]; // bud matches the upper petals
+    case 'dahlia': return pick([RASP, PETALS.tangerine, PETALS.coral, VIOLET, PETALS.pink], seed, 5);
     case 'lavender': return pick([PETALS.lilac, VIOLET], seed, 5);
     case 'sunflower': return PETALS.butter;
     case 'rose': return pick([PETALS.coral, PETALS.pink, RASP], seed, 5);
@@ -822,6 +977,10 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
     else if (kind === 'tulip') headTulip(ctx, st, b);
     else if (kind === 'poppy') headPoppy(ctx, st, 5, b);
     else if (kind === 'clover') headClover(ctx, st);
+    else if (kind === 'buttercup') headButtercup(ctx, st);
+    else if (kind === 'forgetmenot') headForgetMeNot(ctx, st);
+    else if (kind === 'pansy') headPansy(ctx, seed);
+    else if (kind === 'dahlia') headDahlia(ctx, st);
     else if (kind === 'sunflower') headSunflower(ctx, st, 17 + (seed & 3));
     else if (kind === 'rose') headRose(ctx, st);
     else if (kind === 'starbloom') headStar(ctx, st);
@@ -966,9 +1125,10 @@ function lavGrad(ctx: C, st: Style): CanvasGradient {
 }
 
 // ---------------------------------------------------------------- picking
-const KINDS: FlowerKind[] = ['sprout', 'daisy', 'clover', 'tulip', 'poppy', 'bluebell', 'lavender', 'sunflower', 'rose', 'starbloom', 'rainbowbloom'];
-const W0 = [0.2, 0.26, 0.2, 0.11, 0.1, 0.07, 0.03, 0.02, 0.01, 0, 0];
-const W1 = [0.02, 0.07, 0.06, 0.11, 0.11, 0.11, 0.13, 0.12, 0.13, 0.07, 0.07];
+const KINDS: FlowerKind[] = ['sprout', 'daisy', 'clover', 'buttercup', 'tulip', 'poppy', 'bluebell', 'forgetmenot', 'lavender', 'sunflower', 'pansy', 'rose', 'dahlia', 'starbloom', 'rainbowbloom'];
+// Relative weights (normalised when picking): W0 with no streak, W1 at a streak of 20+.
+const W0 = [0.2, 0.26, 0.2, 0.14, 0.11, 0.1, 0.07, 0.07, 0.03, 0.02, 0.03, 0.01, 0.01, 0, 0];
+const W1 = [0.02, 0.07, 0.06, 0.04, 0.11, 0.11, 0.11, 0.09, 0.13, 0.12, 0.1, 0.13, 0.1, 0.07, 0.07];
 
 /** Picks a kind given the player's current word streak; higher streak → better odds of rare kinds. */
 export function pickFlowerKind(combo: number, r: number): FlowerKind {

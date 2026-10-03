@@ -1,7 +1,7 @@
 import { drawFlower, FLOWER_RARITY, type FlowerKind } from '../src/art/flowers';
 import { HILLS, INK, CREAM } from '../src/art/palette';
 
-const KINDS: FlowerKind[] = ['sprout', 'daisy', 'clover', 'tulip', 'poppy', 'bluebell', 'lavender', 'sunflower', 'rose', 'starbloom', 'rainbowbloom'];
+const KINDS = Object.keys(FLOWER_RARITY) as FlowerKind[];
 const ROWS = [0.2, 0.45, 0.7, 1.0, -1, -2]; // -1 = animating at growth 1 (sway), -2 = looping growth
 const params = new URLSearchParams(location.search);
 const stress = params.get('stress') === '1';

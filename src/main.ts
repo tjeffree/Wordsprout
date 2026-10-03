@@ -25,8 +25,9 @@ const keyboard = createKeyboard(kbLayer);
 keyboard.setVisible(false);
 
 const FLOWER_NAMES: Record<FlowerKind, string> = {
-  sprout: 'Sprout', daisy: 'Daisy', clover: 'Clover', tulip: 'Tulip', poppy: 'Poppy', bluebell: 'Bluebell',
-  lavender: 'Lavender', sunflower: 'Sunflower', rose: 'Rose', starbloom: 'Starbloom', rainbowbloom: 'Rainbow Bloom',
+  sprout: 'Sprout', daisy: 'Daisy', clover: 'Clover', buttercup: 'Buttercup', tulip: 'Tulip', poppy: 'Poppy', bluebell: 'Bluebell',
+  forgetmenot: 'Forget-me-not', lavender: 'Lavender', sunflower: 'Sunflower', pansy: 'Pansy', rose: 'Rose', dahlia: 'Dahlia',
+  starbloom: 'Starbloom', rainbowbloom: 'Rainbow Bloom',
 };
 const ALL_KINDS = Object.keys(FLOWER_RARITY) as FlowerKind[];
 
