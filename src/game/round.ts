@@ -1,7 +1,7 @@
 // Round simulation: puffs, typing, scoring, adaptation. No rendering here, so it
 // is deterministic given a random source and can be unit-tested with fake time.
 
-import { SkillModel, type SkillState, type ItemResult } from '../engine/adaptive';
+import { SkillModel, TARGET_PROGRESS, type SkillState, type ItemResult } from '../engine/adaptive';
 import { ContentPicker, keysNewAt, type LittleOpts } from '../engine/content';
 import { getLevel, type ContentKind, type Level } from '../engine/levels';
 import { pickFlowerKind, type FlowerKind } from '../art/flowers';
@@ -123,14 +123,18 @@ export class Round {
 
   readonly noCaps: boolean;
 
+  /** Slow & Steady: one word at a time that waits in the middle of the sky. */
+  readonly steady: boolean;
+
   /** Spelling Bee: words still to come (missed words come back once at the end). */
   readonly spelling: { total: number; queue: { word: string; retry: boolean }[]; results: SpellingResult[] } | null;
 
-  constructor(skill: SkillState, mode: Mode, private rand: () => number = Math.random, opts: { little?: LittleOpts | null; noCaps?: boolean; spelling?: string[] } = {}) {
+  constructor(skill: SkillState, mode: Mode, private rand: () => number = Math.random, opts: { little?: LittleOpts | null; noCaps?: boolean; steady?: boolean; spelling?: string[] } = {}) {
     const words = mode.id === 'spelling' ? [...new Set((opts.spelling ?? []).map((w) => w.toLowerCase()))] : [];
     this.spelling = words.length ? { total: words.length, queue: shuffle(words, rand).map((word) => ({ word, retry: false })), results: [] } : null;
     this.noCaps = !!opts.noCaps || !!opts.little || !!this.spelling;
     this.little = opts.little ?? null;
+    this.steady = !!opts.steady && !this.spelling;
     this.skill = new SkillModel(skill);
     this.mode = mode;
     this.picker = new ContentPicker(rand);
@@ -145,7 +149,7 @@ export class Round {
 
   /** How many puff lanes fit on this screen (set by the app from the layout). */
   laneCap = 99;
-  get maxActive(): number { return Math.max(1, Math.min(this.level.maxActive, this.laneCap)); }
+  get maxActive(): number { return this.steady ? 1 : Math.max(1, Math.min(this.level.maxActive, this.laneCap)); }
 
   /** 0..1 how far through the "day" we are (drives the sun & sky). */
   get day(): number {
@@ -280,7 +284,7 @@ export class Round {
       if (!p.retry && (p.hinted || p.wrong >= 2)) sp.queue.push({ word: p.text, retry: true });
       this.spawnCooldown = 1.4; // let the pop and the flower land before the next word is read out
       if (!sp.queue.length) this.beginEnding();
-    } else this.recordItem({ chars, correct: p.correct, wrong: p.wrong, escaped: false, ms, progress: p.patient ? 0.5 : p.progress, isLetters });
+    } else this.recordItem({ chars, correct: p.correct, wrong: p.wrong, escaped: false, ms, progress: this.steady ? TARGET_PROGRESS : p.patient ? 0.5 : p.progress, isLetters });
 
     if (this.mode.flowerGoal && this.stats.flowers.length >= this.mode.flowerGoal) this.beginEnding();
   }
@@ -404,9 +408,9 @@ export class Round {
     const p: Puff = {
       id: this.nextId++, text: item.text, emoji: item.emoji, kind: item.kind, typed: 0, lane, laneCount,
       travel: this.skill.travelSeconds(item.text.length, queued), age: 0, progress: 0, state: 'fly', stateT: 0,
-      shake: 0, correct: 0, wrong: 0, patient: lv.patient, strict: lv.strictCase && !this.noCaps, seed: Math.floor(this.rand() * 1e6),
+      shake: 0, correct: 0, wrong: 0, patient: lv.patient || this.steady, strict: lv.strictCase && !this.noCaps, seed: Math.floor(this.rand() * 1e6),
       availableAt: this.time + SPAWN_FADE * 0.5,
-      golden: this.stats.items >= 4 && !flying.some((f) => f.golden) && this.rand() < (lv.patient ? 0.12 : 0.08),
+      golden: this.stats.items >= 4 && !flying.some((f) => f.golden) && this.rand() < (lv.patient || this.steady ? 0.12 : 0.08),
     };
     this.puffs.push(p);
     this.spawnCooldown = 0.35;
