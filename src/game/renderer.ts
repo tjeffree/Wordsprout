@@ -3,8 +3,9 @@
 // visualises them and reacts to round events.
 
 import { Scenery, type Tickleable } from '../art/scenery';
-import { drawBee, drawButterfly, drawPuff, drawSeed, drawSparkle, type BeeMood } from '../art/characters';
-import { drawFlower, flowerSwayAngle, FLOWER_RARITY, type FlowerKind } from '../art/flowers';
+import { drawBee, drawButterfly, drawPuff, drawSeed, drawSparkle, puffBurstColors, type BeeMood, type PuffStyle } from '../art/characters';
+import { drawFlower, flowerAnimated, flowerSizeScale, flowerSwayAngle, FLOWER_RARITY, type FlowerKind } from '../art/flowers';
+import type { HatId, ExtraId } from '../art/outfits';
 import { INK, PETALS, clamp01, easeOutBack, easeOutCubic, lerp } from '../art/palette';
 import type { Puff, Round, RoundEvent } from './round';
 
@@ -53,6 +54,8 @@ export class Renderer {
   private rainbow = 0;
   private time = 0;
   reducedMotion = false;
+  /** Bumble's Wardrobe: what Bumble wears and what carries the words. */
+  outfit: { hat: HatId; extra: ExtraId; puff: PuffStyle } = { hat: 'none', extra: 'none', puff: 'dandelion' };
   /** Called when a seed lands and sprouts (for sound). */
   onSprout: (() => void) | null = null;
   private pendingResize = true;
@@ -360,15 +363,17 @@ export class Renderer {
 
   private burst(p: Puff, flower: FlowerKind, combo: number, points: number): void {
     const { x, y, r } = this.puffPos(p, this.time);
-    const n = this.reducedMotion ? 6 : 14;
+    const style = this.outfit.puff;
+    const seedy = style === 'dandelion' || style === 'sparkle' || style === 'rainbow';
+    const n = !seedy ? 0 : this.reducedMotion ? 6 : 14;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + rand(-0.2, 0.2);
       const sp = rand(40, 120) * (r / 40);
       this.particles.push({ kind: 'seed', x: x + Math.cos(a) * r * 0.5, y: y + Math.sin(a) * r * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, rot: a + Math.PI / 2, vr: rand(-1, 1), size: r * rand(0.35, 0.55), life: rand(1.4, 2.4), age: 0, color: '' });
     }
-    const cols = Object.values(PETALS);
-    const sparkles = 8 + Math.min(16, combo);
-    for (let i = 0; i < sparkles; i++) this.addSparkle(x, y, 1, cols[i % cols.length].fill, r);
+    const cols = puffBurstColors(style) ?? Object.values(PETALS).map((c) => c.fill);
+    const sparkles = 8 + Math.min(16, combo) + (seedy ? 0 : 10);
+    for (let i = 0; i < sparkles; i++) this.addSparkle(x, y, 1, cols[i % cols.length], r);
     // The seed that will grow.
     const slot = this.pickSlot(x / this.L.w, flower);
     if (slot) {
@@ -404,8 +409,7 @@ export class Renderer {
     const L = this.L;
     const base = clamp(Math.min(L.h * 0.13, L.w * 0.12), 46, 128);
     const rowScale = [0.72, 0.86, 1][row] ?? 1;
-    const k = kind === 'sprout' ? 0.55 : kind === 'sunflower' || kind === 'rainbowbloom' ? 1.18 : 1;
-    return base * rowScale * k;
+    return base * rowScale * flowerSizeScale(kind);
   }
 
   private avoid: [number, number] | null = null;
@@ -491,7 +495,7 @@ export class Renderer {
 
   /** Plant instantly (used to pre-fill the title-screen garden). */
   seedGarden(n: number) {
-    const kinds: FlowerKind[] = ['daisy', 'tulip', 'poppy', 'buttercup', 'bluebell', 'lavender', 'sunflower', 'pansy', 'rose', 'forgetmenot', 'starbloom', 'dahlia'];
+    const kinds: FlowerKind[] = ['daisy', 'tulip', 'poppy', 'buttercup', 'bluebell', 'lavender', 'sunflower', 'peacebloom', 'pansy', 'rose', 'forgetmenot', 'cornflower', 'starbloom', 'dahlia', 'tigerlily', 'dandelion'];
     for (let i = 0; i < n; i++) {
       const s = this.pickSlot(rand(0.03, 0.97), 'daisy');
       if (s) this.garden.push({ nx: s.nx, row: s.row, kind: kinds[i % kinds.length], seed: i * 97 + 5, t0: -10, sway: 0, scale: rand(0.9, 1.08) });
@@ -521,7 +525,7 @@ export class Renderer {
       const growth = clamp01((t - f.t0) / 1.5);
       const size = this.flowerSize(f.row, f.kind) * f.scale;
       const impulse = this.reducedMotion ? 0 : Math.sin(t * 5 + f.nx * 20) * f.sway + this.pushFlower(f, g.x, g.y, size, dt);
-      if (growth >= 1 && FLOWER_RARITY[f.kind] < 4) this.drawFlowerSprite(f, g.x, g.y, size, t, impulse);
+      if (growth >= 1 && !flowerAnimated(f.kind)) this.drawFlowerSprite(f, g.x, g.y, size, t, impulse);
       else drawFlower(ctx, { kind: f.kind, x: g.x, y: g.y, size, growth, time: t, seed: f.seed, sway: impulse });
     }
     this.drawButterflies(dt);
@@ -559,7 +563,7 @@ export class Renderer {
       ctx.globalAlpha = alpha;
       const ex = p.state === 'escape' || p.state === 'leave' ? -easeOutCubic(clamp01(p.stateT / 1.3)) * 60 : 0;
       if (p.golden) this.drawGoldenAura(x + ex, y + dy, r, t);
-      drawPuff(ctx, { x: x + ex, y: y + dy, radius: r, time: t, seed: p.seed, target: targeted ? 1 : 0, shake: p.shake, urgency });
+      drawPuff(ctx, { x: x + ex, y: y + dy, radius: r, time: t, seed: p.seed, target: targeted ? 1 : 0, shake: p.shake, urgency, style: this.outfit.puff });
       ctx.restore();
     }
     if (labelAlpha > 0.01) this.drawLabel(p, x, y + r * 1.02 + dy, lay, labelAlpha, t, targeted, urgency);
@@ -861,7 +865,7 @@ export class Renderer {
     else if (Math.abs(b.vx) > 25) b.facing = b.vx > 0 ? 1 : -1;
     b.moodT -= dt;
     if (b.moodT <= 0) b.mood = round && round.stats.combo >= 10 ? 'happy' : 'idle';
-    drawBee(this.ctx, { x: b.x, y: b.y, size, time: this.time, mood: b.mood, facing: b.facing, tilt: clamp(b.vx / 900, -0.35, 0.35) });
+    drawBee(this.ctx, { x: b.x, y: b.y, size, time: this.time, mood: b.mood, facing: b.facing, tilt: clamp(b.vx / 900, -0.35, 0.35), hat: this.outfit.hat, extra: this.outfit.extra });
   }
 
   /** Bee position (for DOM speech bubbles). */

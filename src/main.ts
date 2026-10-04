@@ -9,7 +9,10 @@ import { store, AVATARS, type Profile } from './storage/store';
 import { littleName } from './engine/content';
 import { getLevel, PLACEMENTS, type Level } from './engine/levels';
 import { DEFAULT_SKILL } from './engine/adaptive';
-import { drawFlower, FLOWER_RARITY, type FlowerKind } from './art/flowers';
+import { drawFlower, FLOWER_KINDS, FLOWER_NAMES, FLOWER_RARITY, TIER_NAMES, type FlowerKind } from './art/flowers';
+import { drawBee, drawPuff, type PuffStyle } from './art/characters';
+import type { HatId, ExtraId } from './art/outfits';
+import { ITEMS, itemsFor, progressOf, isUnlocked, unlockedIds, howToUnlock, nextUnlock, key, type Item, type Slot } from './engine/unlocks';
 import { h, icon, fmtTime, timeAgo } from './ui/dom';
 
 // ------------------------------------------------------------------ setup --
@@ -24,14 +27,7 @@ const renderer = new Renderer(canvas);
 const keyboard = createKeyboard(kbLayer);
 keyboard.setVisible(false);
 
-const FLOWER_NAMES: Record<FlowerKind, string> = {
-  sprout: 'Sprout', daisy: 'Daisy', clover: 'Clover', buttercup: 'Buttercup', tulip: 'Tulip', poppy: 'Poppy', bluebell: 'Bluebell',
-  forgetmenot: 'Forget-me-not', lavender: 'Lavender', sunflower: 'Sunflower', pansy: 'Pansy', rose: 'Rose', dahlia: 'Dahlia',
-  starbloom: 'Starbloom', rainbowbloom: 'Rainbow Bloom',
-};
-const ALL_KINDS = Object.keys(FLOWER_RARITY) as FlowerKind[];
-
-type Screen = 'title' | 'profiles' | 'new' | 'modes' | 'play' | 'results' | 'board' | 'settings';
+type Screen = 'title' | 'profiles' | 'new' | 'modes' | 'play' | 'results' | 'board' | 'settings' | 'wardrobe';
 let screen: Screen = 'title';
 let round: Round | null = null;
 let attract: { round: Round; bot: Bot } | null = null;
@@ -300,9 +296,15 @@ function show(el: HTMLElement, name: Screen, onKey: (e: KeyboardEvent) => void =
   current = el;
   screen = name;
   menuKey = onKey;
+  applyOutfit();
   ui.append(el);
   const first = el.querySelector<HTMLElement>('[data-autofocus]');
   if (first) setTimeout(() => first.focus({ preventScroll: true }), 30);
+}
+
+/** Dress Bumble and the puffs in the current gardener's wardrobe choices. */
+function applyOutfit(p = store.current) {
+  renderer.outfit = { hat: p?.hat ?? 'none', extra: p?.extra ?? 'none', puff: p?.puff ?? 'dandelion' };
 }
 
 function startAttract() {
@@ -446,21 +448,22 @@ function showModes() {
   modes.append(grid);
   paint();
   const go = () => { p.preferredMode = mode; store.updateProfile(p); startRound(getMode(mode)); };
-  const collection = h('div', { class: 'collection', 'aria-label': 'Flowers discovered' });
-  for (const k of ALL_KINDS) {
-    const c = flowerThumb(k, 40, 48);
-    if (!p.discovered.includes(k)) c.classList.add('locked');
-    c.title = p.discovered.includes(k) ? FLOWER_NAMES[k] : 'Not discovered yet';
-    collection.append(c);
-  }
+  const fresh = newItems(p).length;
+  const treasures = ITEMS.filter((i) => i.flowers > 0);
+  const owned = treasures.filter((i) => isUnlocked(i, progressOf(p))).length;
+  const wardrobe = h('button', { class: 'wardrobe-btn', type: 'button', onclick: () => { sound.uiClick(); showWardrobe(); } },
+    beeThumb(p.hat ?? 'none', p.extra ?? 'none', 64, 56),
+    h('span', { class: 'txt' },
+      h('b', {}, 'Bumble’s Wardrobe'),
+      h('small', {}, `🌸 ${p.discovered.length} of ${FLOWER_KINDS.length} flowers · 🎁 ${owned} of ${treasures.length} treasures`)),
+    fresh ? h('span', { class: 'new-pill' }, `${fresh} new!`) : null);
   const el = h('div', { class: 'screen' }, h('div', { class: 'card pop-in' },
     h('div', { class: 'back' }, iconBtn('back', 'Switch gardener', showProfiles)),
     h('div', { class: 'who' },
       h('span', { class: 'av' }, p.avatar),
       h('div', { class: 'meta' }, h('b', {}, p.name), h('span', {}, `Level ${lv.id} · ${lv.name}${p.bestWpm ? ` · best ${Math.round(p.bestWpm)} WPM` : ''}`)),
     ),
-    h('div', { class: 'collection-label' }, `Flower collection: ${p.discovered.length} of ${ALL_KINDS.length} discovered`),
-    collection,
+    wardrobe,
     modes,
     toggles.el,
     h('div', { class: 'row modes-actions', style: 'flex-wrap:nowrap' },
@@ -525,6 +528,169 @@ function flowerThumb(kind: FlowerKind, w: number, hgt: number): HTMLCanvasElemen
   g.scale(dpr, dpr);
   drawFlower(g, { kind, x: w / 2, y: hgt - 4, size: hgt * 0.86, growth: 1, time: 0, seed: 3 });
   return c;
+}
+
+function thumbCanvas(w: number, hgt: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
+  const c = document.createElement('canvas');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = w * dpr; c.height = hgt * dpr;
+  c.style.width = `${w}px`; c.style.height = `${hgt}px`;
+  const g = c.getContext('2d')!;
+  g.scale(dpr, dpr);
+  return { c, g };
+}
+
+/** Bumble in an outfit, looking at you (t = 0.4 is between blinks). */
+function beeThumb(hat: HatId, extra: ExtraId, w: number, hgt: number): HTMLCanvasElement {
+  const { c, g } = thumbCanvas(w, hgt);
+  // Leave room above for a tall hat and to the left for a cape.
+  const size = Math.min(w * 0.56, hgt * 0.6);
+  drawBee(g, { x: w / 2 + size * 0.1, y: hgt * 0.62, size, time: 0.4, mood: 'idle', facing: 1, hat, extra });
+  return c;
+}
+
+function puffThumb(style: PuffStyle, w: number, hgt: number): HTMLCanvasElement {
+  const { c, g } = thumbCanvas(w, hgt);
+  drawPuff(g, { x: w / 2, y: hgt * 0.44, radius: Math.min(w, hgt) * 0.3, time: 0.4, seed: 5, style });
+  return c;
+}
+
+function itemThumb(i: Item, w: number, hgt: number): HTMLCanvasElement {
+  if (i.slot === 'puff') return puffThumb(i.id as PuffStyle, w, hgt);
+  return i.slot === 'hat' ? beeThumb(i.id as HatId, 'none', w, hgt) : beeThumb('none', i.id as ExtraId, w, hgt);
+}
+
+/** Wardrobe items unlocked since the gardener last looked. */
+function newItems(p: Profile): Item[] {
+  const pr = progressOf(p);
+  const seen = new Set(p.seenItems ?? []);
+  return ITEMS.filter((i) => i.flowers > 0 && isUnlocked(i, pr) && !seen.has(key(i)));
+}
+
+// -------------------------------------------------------------- wardrobe --
+type WardrobeTab = Slot | 'flowers';
+const WARDROBE_TABS: { id: WardrobeTab; label: string }[] = [
+  { id: 'hat', label: '🎩 Hats' }, { id: 'extra', label: '🎀 Extras' }, { id: 'puff', label: '🌬️ Puffs' }, { id: 'flowers', label: '🌸 Flowers' },
+];
+
+/** Bumble's Wardrobe: dress Bumble, pick what carries the words, and see the flower collection. */
+function showWardrobe(from: 'modes' | 'results' = 'modes') {
+  if (from !== 'results') startAttract();
+  const p = store.current;
+  if (!p) return showProfiles();
+  const pr = progressOf(p);
+  const fresh = new Set(newItems(p).map(key));
+  // They've seen them now: next time they're not new.
+  p.seenItems = [...unlockedIds(pr)];
+  store.updateProfile(p);
+  const chosen = (slot: Slot) => (slot === 'hat' ? p.hat ?? 'none' : slot === 'extra' ? p.extra ?? 'none' : p.puff ?? 'dandelion');
+  let tab: WardrobeTab = WARDROBE_TABS.find((t) => t.id !== 'flowers' && ITEMS.some((i) => i.slot === t.id && fresh.has(key(i))))?.id ?? 'hat';
+  let cheerUntil = 0;
+
+  const stage = h('canvas', { class: 'wardrobe-stage', 'aria-hidden': 'true' }) as HTMLCanvasElement;
+  const tabs = h('div', { class: 'tabs', role: 'tablist' });
+  const body = h('div', { class: 'wardrobe-body' });
+  const paint = () => {
+    tabs.innerHTML = '';
+    for (const t of WARDROBE_TABS) {
+      const dot = t.id !== 'flowers' && ITEMS.some((i) => i.slot === t.id && fresh.has(key(i)));
+      tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(t.id === tab), onclick: () => { tab = t.id; sound.uiHover(); paint(); } }, t.label, dot ? h('span', { class: 'dot', 'aria-label': 'new' }) : null));
+    }
+    body.innerHTML = '';
+    body.append(tab === 'flowers' ? flowerCollection(p) : itemGrid(tab));
+  };
+  const itemGrid = (slot: Slot) => {
+    const grid = h('div', { class: 'items rise-in' });
+    for (const i of itemsFor(slot)) {
+      const open = isUnlocked(i, pr);
+      const name = h('b', {}, i.name);
+      if (!open) {
+        const pct = Math.min(100, Math.round((pr.flowers / i.flowers) * 100));
+        grid.append(h('div', { class: 'item locked', title: howToUnlock(i) },
+          itemThumb(i, 96, 78), name,
+          h('small', {}, `🔒 ${howToUnlock(i)}`),
+          h('span', { class: 'meter', 'aria-label': `${pr.flowers} of ${i.flowers} flowers` }, h('span', { style: `width:${pct}%` }))));
+        continue;
+      }
+      grid.append(h('button', {
+        class: 'item', type: 'button', 'aria-pressed': String(chosen(slot) === i.id),
+        onclick: () => {
+          if (slot === 'hat') p.hat = i.id as HatId; else if (slot === 'extra') p.extra = i.id as ExtraId; else p.puff = i.id as PuffStyle;
+          store.updateProfile(p); applyOutfit(p); sound.uiClick();
+          cheerUntil = performance.now() + 1200;
+          paint();
+        },
+      }, itemThumb(i, 96, 78), name, fresh.has(key(i)) ? h('span', { class: 'new-pill' }, 'New!') : null));
+    }
+    return grid;
+  };
+
+  const back = () => showModes();
+  const el = h('div', { class: 'screen' }, h('div', { class: 'card pop-in wardrobe', style: 'max-width:820px' },
+    h('div', { class: 'back' }, iconBtn('back', 'Back', back)),
+    h('h2', {}, '🎀 Bumble’s Wardrobe'),
+    h('p', { class: 'sub' }, 'Every flower you grow brings new treasures!'),
+    stage, tabs, body));
+  paint();
+  show(el, 'wardrobe', (e) => {
+    if (e.key === 'Escape') back();
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const n = WARDROBE_TABS.findIndex((t) => t.id === tab);
+      tab = WARDROBE_TABS[(n + (e.key === 'ArrowRight' ? 1 : WARDROBE_TABS.length - 1)) % WARDROBE_TABS.length].id;
+      sound.uiHover(); paint();
+    }
+  });
+
+  // The preview: Bumble in the chosen outfit beside a puff carrying the gardener's name.
+  const g = stage.getContext('2d')!;
+  const drawStage = (now: number) => {
+    if (current !== el) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = stage.clientWidth, hgt = stage.clientHeight;
+    if (stage.width !== Math.round(w * dpr) || stage.height !== Math.round(hgt * dpr)) { stage.width = Math.round(w * dpr); stage.height = Math.round(hgt * dpr); }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, hgt);
+    const t = now / 1000;
+    const size = Math.min(hgt * 0.5, w * 0.2);
+    const bx = w * 0.32 + Math.sin(t * 0.8) * w * 0.03, by = hgt * 0.56 + Math.sin(t * 1.6) * hgt * 0.04;
+    drawBee(g, { x: bx, y: by, size, time: t, mood: now < cheerUntil ? 'cheer' : 'idle', facing: 1, tilt: Math.cos(t * 0.8) * 0.06, hat: p.hat ?? 'none', extra: p.extra ?? 'none' });
+    const r = Math.min(hgt * 0.2, 40), px = w * 0.68, py = hgt * 0.34;
+    drawPuff(g, { x: px, y: py, radius: r, time: t, seed: 9, style: p.puff ?? 'dandelion' });
+    stageTag(g, p.name, px, py + r * 1.02, Math.max(15, Math.min(24, hgt * 0.12)));
+    requestAnimationFrame(drawStage);
+  };
+  requestAnimationFrame(drawStage);
+}
+
+/** The word tag that hangs under a puff (a simple version of the in-game one). */
+function stageTag(g: CanvasRenderingContext2D, text: string, cx: number, top: number, font: number) {
+  g.font = `700 ${font}px 'Andika', 'Fredoka', system-ui, sans-serif`;
+  const w = g.measureText(text).width + font * 0.84, hgt = font * 1.5;
+  g.strokeStyle = 'rgba(122, 96, 140, 0.45)'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(cx, top - font * 0.35); g.lineTo(cx, top + 2); g.stroke();
+  g.beginPath(); g.roundRect(cx - w / 2, top, w, hgt, hgt / 2);
+  g.fillStyle = 'rgba(255, 250, 240, 0.95)'; g.fill();
+  g.lineWidth = 2; g.strokeStyle = 'rgba(185, 156, 210, 0.7)'; g.stroke();
+  g.fillStyle = '#3d2c4e'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, cx, top + hgt / 2 + font * 0.04);
+}
+
+/** Every flower, by rarity: the ones not found yet are shadows with a "?". */
+function flowerCollection(p: Profile): HTMLElement {
+  const wrap = h('div', { class: 'tiers rise-in' });
+  TIER_NAMES.forEach((tierName, tier) => {
+    const kinds = FLOWER_KINDS.filter((k) => FLOWER_RARITY[k] === tier);
+    const found = kinds.filter((k) => p.discovered.includes(k));
+    wrap.append(h('section', { class: `tier tier-${tier}` },
+      h('div', { class: 'tier-head' }, h('b', {}, tierName), h('small', {}, `${found.length} of ${kinds.length}`)),
+      h('div', { class: 'tier-grid' }, ...kinds.map((k) => {
+        const has = p.discovered.includes(k);
+        const c = flowerThumb(k, 56, 66);
+        if (!has) c.classList.add('locked');
+        return h('div', { class: `flower${has ? '' : ' locked'}`, title: has ? FLOWER_NAMES[k] : 'Not found yet' }, h('span', { class: 'pic' }, c), h('span', {}, has ? FLOWER_NAMES[k] : '?'));
+      }))));
+  });
+  return wrap;
 }
 
 // ------------------------------------------------------------------ play --
@@ -756,6 +922,7 @@ function finishRound() {
   const firstInMode = modeBest === 0;
   const newKinds = [...new Set(s.flowers)].filter((k) => !p.discovered.includes(k));
   const levelEnd = r.skill.state.level;
+  const hadBefore = unlockedIds(progressOf(p));
   p.skill = r.snapshot();
   p.rounds++;
   p.lastPlayed = Date.now();
@@ -763,6 +930,14 @@ function finishRound() {
   if (s.score > p.bestScore) p.bestScore = s.score;
   p.totalFlowers += s.flowers.length;
   p.discovered = [...p.discovered, ...newKinds];
+  // Progress towards Bumble's Wardrobe. Personal bests count as the results card shows them.
+  p.maxLevel = Math.max(p.maxLevel ?? 0, s.levelPeak, levelEnd);
+  p.pbs = (p.pbs ?? 0) + (pbScore && !firstInMode ? 1 : 0) + (pbWpm && p.rounds > 1 ? 1 : 0);
+  p.bestStreak = Math.max(p.bestStreak ?? 0, s.bestCombo);
+  p.spelled = (p.spelled ?? 0) + (r.spelling?.results.length ?? 0);
+  const progress = progressOf(p);
+  const unlocked = ITEMS.filter((i) => !hadBefore.has(key(i)) && isUnlocked(i, progress));
+  const next = nextUnlock(progress);
   store.updateProfile(p);
   const rank = s.items > 0 ? store.addScore({ profileId: p.id, name: p.name, avatar: p.avatar, mode: r.mode.id, score: s.score, wpm, accuracy, flowers: s.flowers.length, level: levelEnd, bestCombo: s.bestCombo, little: !!r.little, noCaps: r.noCaps && !r.little && !r.spelling, steady: r.steady, date: Date.now() }) : 0;
 
@@ -776,9 +951,13 @@ function finishRound() {
   const badges = h('div', { class: 'badges rise-in' },
     r.spelling ? null : lvlBadge, // spelling doesn't move the typing level
     rank > 0 && rank <= 10 ? h('span', { class: 'badge butter' }, `🏆 #${rank} on ${r.mode.name}`) : null,
-    newKinds.length === 1 ? h('span', { class: 'badge butter' }, flowerThumb(newKinds[0], 26, 32), `New flower: ${FLOWER_NAMES[newKinds[0]]}!`) : null,
+    newKinds.length === 1 ? h('span', { class: `badge butter tier-${FLOWER_RARITY[newKinds[0]]}` }, flowerThumb(newKinds[0], 26, 32), `New ${FLOWER_RARITY[newKinds[0]] >= 2 ? TIER_NAMES[FLOWER_RARITY[newKinds[0]]] + ' ' : ''}flower: ${FLOWER_NAMES[newKinds[0]]}!`) : null,
     newKinds.length > 1 ? h('span', { class: 'badge butter', title: newKinds.map((k) => FLOWER_NAMES[k]).join(', ') }, ...newKinds.slice(0, 8).map((k) => flowerThumb(k, 22, 28)), `${newKinds.length} new flowers!`) : null,
+    unlocked.length === 1 ? h('span', { class: 'badge lilac' }, itemThumb(unlocked[0], 30, 28), `New for Bumble: ${unlocked[0].name}!`) : null,
+    unlocked.length > 1 ? h('span', { class: 'badge lilac', title: unlocked.map((i) => i.name).join(', ') }, ...unlocked.slice(0, 5).map((i) => itemThumb(i, 30, 28)), `${unlocked.length} new treasures for Bumble!`) : null,
   );
+  // What's next: a little goal to keep growing towards.
+  const nextLine = !unlocked.length && next ? h('p', { class: 'next-unlock' }, itemThumb(next.item, 30, 28), `${next.more} more flower${next.more === 1 ? '' : 's'} until the ${next.item.name} 🎁`) : null;
   const num = (label: string, value: string, opts: { hl?: boolean; pb?: boolean } = {}) =>
     h('div', { class: `bignum${opts.hl ? ' hl' : ''}` }, h('b', {}, value), h('small', {}, label), opts.pb ? h('div', {}, h('span', { class: 'pb' }, 'PERSONAL BEST')) : null);
   const again = () => startRound(r.mode);
@@ -793,9 +972,11 @@ function finishRound() {
       num('best streak', String(s.bestCombo)),
     ),
     badges,
+    nextLine,
     r.spelling ? spellingReport(r.spelling.results) : null,
     h('div', { class: 'row' },
       btn('Play again', 'big', again, { 'data-autofocus': true }),
+      unlocked.length ? btn('🎀 Try it on!', 'butter small', () => showWardrobe('results')) : null,
       btn('Change game', 'ghost small', showModes),
       btn('🏆 Leaderboard', 'ghost small', () => showBoard('results')),
     ),
@@ -924,5 +1105,6 @@ showTitle();
   startRound: (id: ModeId) => startRound(getMode(id)),
   showModes,
   showBoard,
+  showWardrobe,
   showResults: finishRound,
 };

@@ -1,5 +1,11 @@
-import { drawBee, drawPuff, drawSeed, drawButterfly, drawSparkle, type BeeMood } from '../src/art/characters';
+import { drawBee, drawPuff, drawSeed, drawButterfly, drawSparkle, PUFF_STYLES, type BeeMood, type PuffStyle } from '../src/art/characters';
+import { HATS, EXTRAS, type HatId, type ExtraId } from '../src/art/outfits';
 import { INK } from '../src/art/palette';
+
+// ?view=orig|hats|extras|combos|puffs  (default orig)   ?t=<seconds> freezes time
+const params = new URLSearchParams(location.search);
+const view = params.get('view') ?? 'orig';
+const fixedT = params.has('t') ? Number(params.get('t')) : null;
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -29,14 +35,93 @@ function label(s: string, x: number, y: number) {
   ctx.fillText(s, x, y);
 }
 
+function outfitGrid<T extends string>(items: readonly T[], t: number, wear: (v: T) => { hat?: HatId; extra?: ExtraId }) {
+  const cw = Math.min(200, W / items.length);
+  items.forEach((it, i) => {
+    const cx = cw * (i + 0.5);
+    const o = wear(it);
+    label(it, cx, 22);
+    drawBee(ctx, { x: cx, y: 120, size: 120, time: t, mood: 'idle', facing: 1, ...o });
+    drawBee(ctx, { x: cx, y: 300, size: 120, time: t + 0.7, mood: 'cheer', facing: -1, ...o });
+    drawBee(ctx, { x: cx - 45, y: 440, size: 60, time: t + 0.3, mood: 'happy', facing: 1, ...o });
+    drawBee(ctx, { x: cx + 45, y: 440, size: 60, time: t + 1.1, mood: 'oops', facing: -1, ...o });
+    drawBee(ctx, { x: cx - 45, y: 540, size: 60, time: t + 0.5, mood: 'sleepy', facing: 1, ...o });
+    drawBee(ctx, { x: cx + 45, y: 540, size: 44, time: t + 2, mood: 'idle', facing: -1, tilt: 0.15, ...o });
+    drawBee(ctx, { x: cx, y: 680, size: 84, time: t + 0.2, mood: 'happy', facing: 1, tilt: -0.12, ...o });
+    drawBee(ctx, { x: cx, y: 800, size: 40, time: t + 0.9, mood: 'cheer', facing: 1, ...o });
+  });
+}
+
+const COMBOS: { hat: HatId; extra: ExtraId }[] = [
+  { hat: 'crown', extra: 'cape' },
+  { hat: 'graduation', extra: 'specs' },
+  { hat: 'party', extra: 'bowtie' },
+  { hat: 'sunhat', extra: 'heartglasses' },
+  { hat: 'wizard', extra: 'scarf' },
+  { hat: 'flowercrown', extra: 'lei' },
+  { hat: 'tophat', extra: 'bowtie' },
+];
+
+function fakeTag(x: number, top: number, word: string, targeted: boolean) {
+  ctx.font = '700 20px sans-serif';
+  const w = ctx.measureText(word).width + 18;
+  const h = 30;
+  ctx.strokeStyle = 'rgba(122, 96, 140, 0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, top - 7); ctx.lineTo(x, top + 2); ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, top, w, h, 11);
+  ctx.fillStyle = 'rgba(255, 250, 240, 0.92)';
+  ctx.fill();
+  ctx.lineWidth = targeted ? 3 : 2;
+  ctx.strokeStyle = targeted ? '#ffc94a' : 'rgba(185, 156, 210, 0.7)';
+  ctx.stroke();
+  ctx.fillStyle = INK;
+  ctx.textAlign = 'center';
+  ctx.fillText(word, x, top + 22);
+}
+
+function puffGrid(t: number) {
+  const cw = Math.min(250, W / PUFF_STYLES.length);
+  const rows: { r: number; target: number; urgency?: number; shake?: number; name: string }[] = [
+    { r: 30, target: 0, name: 'r30' },
+    { r: 30, target: 1, name: 'r30 target' },
+    { r: 54, target: 0, name: 'r54' },
+    { r: 54, target: 1, name: 'r54 target' },
+    { r: 54, target: 0, urgency: 0.9, name: 'r54 urgency' },
+    { r: 54, target: 1, shake: (Math.sin(t * 2) + 1) / 2, name: 'r54 shake' },
+  ];
+  let y = 60;
+  rows.forEach((row, ri) => {
+    y += row.r * 1.5;
+    PUFF_STYLES.forEach((st: PuffStyle, i) => {
+      const cx = cw * (i + 0.5);
+      if (ri === 0) label(st, cx, 20);
+      drawPuff(ctx, { x: cx, y, radius: row.r, time: t, seed: i * 3 + ri + 1, target: row.target, urgency: row.urgency, shake: row.shake, style: st });
+      fakeTag(cx, y + row.r * 1.02, row.r < 40 ? 'cat' : 'flower', row.target > 0);
+    });
+    label(row.name, 40, y - row.r);
+    y += row.r * 1.02 + 50;
+  });
+}
+
 function frame(now: number) {
-  const t = now / 1000;
+  const t = fixedT ?? now / 1000;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#8fc8ff');
   g.addColorStop(1, '#ffe3c9');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
+
+  if (view !== 'orig') {
+    if (view === 'hats') outfitGrid(HATS, t, (h) => ({ hat: h }));
+    else if (view === 'extras') outfitGrid(EXTRAS, t, (e) => ({ extra: e }));
+    else if (view === 'combos') outfitGrid(COMBOS.map((c) => c.hat + '+' + c.extra), t, (k) => { const [hat, extra] = k.split('+') as [HatId, ExtraId]; return { hat, extra }; });
+    else if (view === 'puffs') puffGrid(t);
+    if (fixedT === null) requestAnimationFrame(frame);
+    return;
+  }
 
   // bees: big row (facing right then left alternating), small row
   const cw = W / 5;
@@ -100,6 +185,6 @@ function frame(now: number) {
   ctx.textAlign = 'center';
   ctx.fillText(fps.toFixed(0) + ' fps', W - 49, 25);
 
-  requestAnimationFrame(frame);
+  if (fixedT === null) requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

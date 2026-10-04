@@ -1,11 +1,15 @@
 import { drawFlower, FLOWER_RARITY, type FlowerKind } from '../src/art/flowers';
 import { HILLS, INK, CREAM } from '../src/art/palette';
 
-const KINDS = Object.keys(FLOWER_RARITY) as FlowerKind[];
+const ALL_KINDS = Object.keys(FLOWER_RARITY) as FlowerKind[];
 const ROWS = [0.2, 0.45, 0.7, 1.0, -1, -2]; // -1 = animating at growth 1 (sway), -2 = looping growth
 const params = new URLSearchParams(location.search);
 const stress = params.get('stress') === '1';
 const frozen = params.get('t');
+const only = params.get('only');
+const thumb = params.get('thumb') === '1';
+const box = params.get('box') === '1';
+const KINDS = only ? ALL_KINDS.filter((k) => only.split(',').includes(k)) : ALL_KINDS;
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -42,7 +46,18 @@ function frame(now: number) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = CREAM; ctx.fillRect(0, 0, W, H);
 
-  if (stress) {
+  if (thumb) {
+    // collection thumbnails (40x48), drawn like main.ts does, at 1x and zoomed 4x
+    KINDS.forEach((k, i) => {
+      const w = 40, hgt = 48, x0 = 10 + (i % 13) * 48, y0 = 10 + Math.floor(i / 13) * 56;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, y0, w, hgt);
+      drawFlower(ctx, { kind: k, x: x0 + w / 2, y: y0 + hgt - 4, size: hgt * 0.86, growth: 1, time: 0, seed: 3 });
+      ctx.save(); const zx = 10 + (i % 13) * 170, zy = 140 + Math.floor(i / 13) * 210; ctx.translate(zx, zy); ctx.scale(4, 4);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, hgt); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.25; ctx.strokeRect(0, 0, w, hgt);
+      drawFlower(ctx, { kind: k, x: w / 2, y: hgt - 4, size: hgt * 0.86, growth: 1, time: 0, seed: 3 });
+      ctx.restore();
+    });
+  } else if (stress) {
     for (const f of stressList) {
       drawFlower(ctx, { kind: f.kind, x: 30 + f.x * (W - 60), y: 180 + f.y * (H - 200), size: f.size, growth: 1, time, seed: f.seed });
     }
@@ -65,6 +80,7 @@ function frame(now: number) {
         if (g === -2) growth = ((time + i * 0.25) % 4) / 3; // 0..1.33 -> holds at 1
         if (growth > 1) growth = 1;
         drawFlower(ctx, { kind: k, x: labelW + cw * (i + 0.5), y: gy, size, growth, time, seed: 11 + i * 5 + r * 2 });
+        if (box) { ctx.strokeStyle = 'rgba(255,0,0,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(labelW + cw * (i + 0.5) - 0.85 * size, gy - 1.32 * size, 1.7 * size, 1.5 * size); }
       });
     });
   }
