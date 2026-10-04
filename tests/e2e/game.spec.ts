@@ -82,6 +82,34 @@ test('a little learner grows ten flowers and lands on the leaderboard', async ({
   expect(errors).toEqual([]);
 });
 
+test('growing flowers unlocks a hat for Bumble in the wardrobe', async ({ page }) => {
+  const errors = watchErrors(page);
+  await fresh(page);
+  await newGardener(page, 'Nova', 'sprout');
+  // 15 flowers so far: ten more unlocks the flower crown (at 20).
+  await page.evaluate(() => { const g = window.__game; const p = g.store.current; p.totalFlowers = 15; g.store.updateProfile(p); });
+  await page.locator('.mode[data-id="ten"]').click();
+  await page.getByRole('button', { name: /^Start/ }).click();
+  for (let i = 0; i < 40 && (await page.evaluate(() => window.__game.screen)) === 'play'; i++) await typeNext(page, 1, 700);
+  // Ten in a row also earns the sun hat, and a lucky Legendary flower the rainbow puff, so there may be more.
+  await expect(page.getByText(/New for Bumble: Flower crown!|new treasures for Bumble!/)).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /try it on/i }).click();
+  const crown = page.locator('.item', { hasText: 'Flower crown' });
+  await expect(crown.locator('.new-pill')).toBeVisible();
+  await crown.click();
+  await expect(crown).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => [window.__game.store.current.hat, window.__game.renderer.outfit.hat])).toEqual(['flowercrown', 'flowercrown']);
+  // Locked treasures say how to get them.
+  await expect(page.locator('.item.locked', { hasText: 'Golden crown' })).toContainText('Grow 1000 flowers');
+  await page.getByRole('tab', { name: /🌸 Flowers/ }).click();
+  await expect(page.locator('.tier')).toHaveCount(5);
+  // Back on the game menu, nothing is new any more.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.wardrobe-btn')).toBeVisible();
+  await expect(page.locator('.wardrobe-btn .new-pill')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test('Spelling Bee reads each word aloud and lists the words at the end', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = watchErrors(page);

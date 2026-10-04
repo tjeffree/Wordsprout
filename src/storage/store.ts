@@ -4,6 +4,8 @@
 
 import { DEFAULT_SKILL, cpsGuessForLevel, type SkillState } from '../engine/adaptive';
 import type { FlowerKind } from '../art/flowers';
+import type { HatId, ExtraId } from '../art/outfits';
+import type { PuffStyle } from '../art/characters';
 import { MODES, type ModeId } from '../game/round';
 
 const KEY = 'wordsprout.v1';
@@ -28,6 +30,17 @@ export interface Profile {
   noCaps?: boolean;
   /** Slow & Steady: one word at a time that waits in the middle. */
   steady?: boolean;
+  /** Bumble's Wardrobe: what Bumble wears and what carries the words. */
+  hat?: HatId;
+  extra?: ExtraId;
+  puff?: PuffStyle;
+  /** Wardrobe items (slot:id) already seen, so new unlocks can say "New!". */
+  seenItems?: string[];
+  /** Progress towards unlocks (see engine/unlocks.ts). */
+  maxLevel?: number;
+  pbs?: number;
+  bestStreak?: number;
+  spelled?: number;
 }
 
 export interface ScoreEntry {
@@ -69,9 +82,10 @@ function load(): Data {
     const raw = globalThis.localStorage?.getItem(KEY);
     if (raw) {
       const d = JSON.parse(raw) as Partial<Data>;
+      const scores = Array.isArray(d.scores) ? d.scores.filter((s) => s && typeof s.score === 'number' && typeof s.mode === 'string') : [];
       return {
-        profiles: Array.isArray(d.profiles) ? d.profiles.filter((p) => p && typeof p === 'object' && typeof p.id === 'string').map(fixProfile) : [],
-        scores: Array.isArray(d.scores) ? d.scores.filter((s) => s && typeof s.score === 'number' && typeof s.mode === 'string') : [],
+        profiles: Array.isArray(d.profiles) ? d.profiles.filter((p) => p && typeof p === 'object' && typeof p.id === 'string').map((p) => fixProfile(p, scores)) : [],
+        scores,
         settings: { ...DEFAULT_SETTINGS, ...(d.settings ?? {}) },
         currentProfile: d.currentProfile ?? null,
       };
@@ -80,8 +94,10 @@ function load(): Data {
   return { profiles: [], scores: [], settings: { ...DEFAULT_SETTINGS }, currentProfile: null };
 }
 
-function fixProfile(p: Profile): Profile {
-  return { ...p, skill: { ...DEFAULT_SKILL, ...(p.skill ?? {}), keys: { ...(p.skill?.keys ?? {}) } }, discovered: p.discovered ?? [] };
+function fixProfile(p: Profile, scores: ScoreEntry[]): Profile {
+  // Gardeners from before the wardrobe: their best streak so far is on the leaderboard.
+  const bestStreak = p.bestStreak ?? Math.max(0, ...scores.filter((s) => s.profileId === p.id).map((s) => s.bestCombo ?? 0));
+  return { ...p, skill: { ...DEFAULT_SKILL, ...(p.skill ?? {}), keys: { ...(p.skill?.keys ?? {}) } }, discovered: p.discovered ?? [], bestStreak };
 }
 
 let data: Data = load();
@@ -114,6 +130,7 @@ export const store = {
       rounds: 0, bestWpm: 0, bestScore: 0, totalFlowers: 0, discovered: [],
       preferredMode: level <= 11 ? 'ten' : 'stroll',
       noCaps: level <= 11,
+      maxLevel: level, pbs: 0, bestStreak: 0, spelled: 0,
     };
     data.profiles.push(p);
     data.currentProfile = p.id;

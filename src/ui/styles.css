@@ -207,10 +207,63 @@ kbd { font: 600 0.85em var(--font); background: #fff; border-radius: 8px; paddin
 .toggles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
 .chip-toggle { font: 500 15px var(--font); color: var(--ink); background: #fff; border: 2px solid #eadff7; border-radius: 999px; padding: 7px 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .chip-toggle[aria-pressed='true'] { background: #efe7ff; border-color: var(--lilac); }
-.collection { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: -6px 0 18px; }
-.collection canvas { width: 40px; height: 48px; border-radius: 12px; background: #fff4e3; }
-.collection canvas.locked { opacity: 0.35; filter: grayscale(1) brightness(1.1); }
-.collection-label { text-align: center; font-size: 14px; color: var(--ink-soft); margin-bottom: 8px; }
+/* ----------------------------------------------------------- wardrobe -- */
+.wardrobe-btn {
+  font: inherit; color: var(--ink); cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: -4px 0 16px;
+  background: #f3edff; border: 3px solid transparent; border-radius: 22px; padding: 6px 16px 6px 8px;
+  transition: transform 0.15s cubic-bezier(.3,1.6,.6,1), border-color 0.2s;
+}
+.wardrobe-btn:hover { transform: translateY(-2px); border-color: var(--lilac); }
+.wardrobe-btn:focus-visible { outline: 4px solid rgba(255, 212, 92, 0.9); outline-offset: 3px; }
+.wardrobe-btn canvas { flex: none; }
+.wardrobe-btn .txt { flex: 1; display: flex; flex-direction: column; }
+.wardrobe-btn b { font-size: 19px; }
+.wardrobe-btn small { color: var(--ink-soft); font-size: 14px; }
+.new-pill { flex: none; background: var(--coral); color: #fff; font-weight: 700; font-size: 14px; padding: 3px 11px; border-radius: 999px; box-shadow: 0 2px 0 var(--coral-d); animation: wiggle 2.4s ease-in-out infinite; }
+@keyframes wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-8deg) scale(1.08); } 90% { transform: rotate(7deg) scale(1.08); } 95% { transform: rotate(-4deg); } }
+.wardrobe-stage { display: block; width: 100%; height: clamp(130px, 22vh, 190px); border-radius: 22px; margin-bottom: 14px; background: linear-gradient(180deg, #bfe0ff, #e4f1ff 60%, #fff1de); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7); }
+.tab .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); margin-left: 6px; vertical-align: 2px; }
+.wardrobe h2 { padding: 0 44px; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .items { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); } }
+.item {
+  font: inherit; color: var(--ink); cursor: pointer; position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+  background: #fff4e3; border: 3px solid transparent; border-radius: 20px; padding: 8px 8px 10px;
+  transition: transform 0.15s cubic-bezier(.3,1.6,.6,1), background 0.2s, border-color 0.2s;
+}
+button.item:hover { transform: translateY(-3px); }
+.item:focus-visible { outline: 4px solid rgba(255, 212, 92, 0.9); outline-offset: 3px; }
+.item[aria-pressed='true'] { border-color: var(--mint-d); background: #e2f8f0; box-shadow: 0 4px 0 var(--mint-d); }
+.item b { font-size: 15px; }
+.item small { color: var(--ink-soft); font-size: 12.5px; line-height: 1.25; }
+.item.locked { cursor: default; background: #f4efe8; }
+.item.locked canvas { filter: grayscale(1); opacity: 0.45; }
+.item .new-pill { position: absolute; top: -9px; right: -6px; font-size: 12px; padding: 2px 9px; }
+.meter { display: block; width: 100%; height: 8px; border-radius: 99px; background: #e8dfd2; overflow: hidden; margin-top: 4px; }
+.meter span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--mint), var(--leaf)); }
+.tiers { display: flex; flex-direction: column; gap: 12px; }
+.tier { border-radius: 20px; padding: 10px 12px 12px; background: var(--tb); border: 3px solid var(--tc); }
+.tier-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 4px 6px; }
+.tier-head b { color: var(--td); font-size: 17px; letter-spacing: 0.02em; }
+.tier-head small { color: var(--ink-soft); font-size: 14px; font-weight: 600; }
+.tier-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.tier .flower { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 600; text-align: center; line-height: 1.15; }
+.tier .flower .pic { display: block; background: #fffdf8; border-radius: 14px; }
+.tier .flower canvas { display: block; width: 56px; height: 66px; }
+/* Not found yet: just a shadow of the flower. */
+.tier .flower.locked canvas { filter: brightness(0) opacity(0.16); }
+.tier .flower.locked span { color: var(--ink-soft); }
+/* Rarity colours, after the RPG item-quality colours: grey, green, blue, orange, rainbow. */
+.tier-0 { --tc: #ddd3c4; --tb: #faf6ef; --td: #7d6f5c; }
+.tier-1 { --tc: #9fdb8a; --tb: #effaea; --td: #3f8a2e; }
+.tier-2 { --tc: #95c5f2; --tb: #ebf4ff; --td: #2f6fb0; }
+.tier-3 { --tc: #ffbb66; --tb: #fff4e2; --td: #c46a0c; }
+.tier.tier-4 { border-color: transparent; background: linear-gradient(#fdf8ff, #fdf8ff) padding-box, linear-gradient(90deg, #b99cff, #8fd0ff, #7ee0c3, #ffe27a, #ffa45c, #ff7a9a) border-box; --td: #8a4fd0; }
+.badge.tier-3 { background: #ffe6c2; }
+.badge.tier-4 { background: linear-gradient(90deg, #efe7ff, #e3f4ff, #fff6d6, #ffe6ee); }
+.next-unlock { display: flex; align-items: center; justify-content: center; gap: 6px; margin: -6px 0 16px; color: var(--ink-soft); font-size: 15px; font-weight: 600; }
 
 /* ----------------------------------------------------------------- HUD -- */
 .hud { position: absolute; inset: 0; pointer-events: none !important; }

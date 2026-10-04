@@ -5,17 +5,52 @@
 import { PETALS, STEM, LEAF, SOIL, SOIL_DARK, clamp01, lerp, easeOutBack, easeOutCubic } from './palette';
 
 export type FlowerKind =
-  | 'sprout' | 'daisy' | 'tulip' | 'poppy' | 'bluebell' | 'clover' | 'buttercup' | 'forgetmenot'
-  | 'lavender' | 'sunflower' | 'pansy' | 'rose' | 'dahlia' | 'starbloom' | 'rainbowbloom';
+  | 'sprout' | 'daisy' | 'clover' | 'buttercup' | 'dandelion' | 'peacebloom'
+  | 'tulip' | 'poppy' | 'bluebell' | 'forgetmenot' | 'cornflower' | 'snowdrop'
+  | 'lavender' | 'sunflower' | 'pansy' | 'rose' | 'dahlia' | 'tigerlily' | 'heartblossom'
+  | 'starbloom' | 'goldenlotus' | 'frostlotus' | 'jadevine' | 'moonflower'
+  | 'rainbowbloom' | 'phoenixbloom';
 
-/** Rarity tier 0..4 (0 common → 4 legendary). */
+/** Rarity tier 0..4 (0 Common, 1 Uncommon, 2 Rare, 3 Legendary, 4 Mythic). Keys are in display order. */
 export const FLOWER_RARITY: Record<FlowerKind, number> = {
-  sprout: 0, daisy: 0, clover: 0, buttercup: 0,
-  tulip: 1, poppy: 1, bluebell: 1, forgetmenot: 1,
-  lavender: 2, sunflower: 2, pansy: 2,
-  rose: 3, dahlia: 3,
-  starbloom: 4, rainbowbloom: 4,
+  sprout: 0, daisy: 0, clover: 0, buttercup: 0, dandelion: 0, peacebloom: 0,
+  tulip: 1, poppy: 1, bluebell: 1, forgetmenot: 1, cornflower: 1, snowdrop: 1,
+  lavender: 2, sunflower: 2, pansy: 2, rose: 2, dahlia: 2, tigerlily: 2, heartblossom: 2,
+  starbloom: 3, goldenlotus: 3, frostlotus: 3, jadevine: 3, moonflower: 3,
+  rainbowbloom: 4, phoenixbloom: 4,
 };
+
+/** Every kind, in display order (by tier). */
+export const FLOWER_KINDS: readonly FlowerKind[] = [
+  'sprout', 'daisy', 'clover', 'buttercup', 'dandelion', 'peacebloom',
+  'tulip', 'poppy', 'bluebell', 'forgetmenot', 'cornflower', 'snowdrop',
+  'lavender', 'sunflower', 'pansy', 'rose', 'dahlia', 'tigerlily', 'heartblossom',
+  'starbloom', 'goldenlotus', 'frostlotus', 'jadevine', 'moonflower',
+  'rainbowbloom', 'phoenixbloom',
+];
+
+export const FLOWER_NAMES: Record<FlowerKind, string> = {
+  sprout: 'Sprout', daisy: 'Daisy', clover: 'Clover', buttercup: 'Buttercup', dandelion: 'Dandelion', peacebloom: 'Peacebloom',
+  tulip: 'Tulip', poppy: 'Poppy', bluebell: 'Bluebell', forgetmenot: 'Forget-me-not', cornflower: 'Cornflower', snowdrop: 'Snowdrop',
+  lavender: 'Lavender', sunflower: 'Sunflower', pansy: 'Pansy', rose: 'Rose', dahlia: 'Dahlia', tigerlily: 'Tiger Lily', heartblossom: 'Heartblossom',
+  starbloom: 'Starbloom', goldenlotus: 'Golden Lotus', frostlotus: 'Frost Lotus', jadevine: 'Jade Vine', moonflower: 'Moonflower',
+  rainbowbloom: 'Rainbow Bloom', phoenixbloom: 'Phoenix Bloom',
+};
+
+export const TIER_NAMES = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Mythic'] as const;
+
+/** True for kinds whose fully grown look changes over time (the rest can be cached as still bitmaps). */
+export function flowerAnimated(kind: FlowerKind): boolean {
+  return kind === 'starbloom' || kind === 'rainbowbloom' || kind === 'goldenlotus' || kind === 'frostlotus'
+    || kind === 'moonflower' || kind === 'phoenixbloom';
+}
+
+/** Size multiplier the renderer applies to each kind. */
+export function flowerSizeScale(kind: FlowerKind): number {
+  if (kind === 'sprout') return 0.55;
+  if (kind === 'sunflower' || kind === 'rainbowbloom' || kind === 'phoenixbloom') return 1.18;
+  return 1;
+}
 
 export interface FlowerOpts {
   kind: FlowerKind;
@@ -38,6 +73,22 @@ const RED: Col = { fill: '#ff5d62', stroke: '#c23a4c' };
 const VIOLET: Col = { fill: '#a98af0', stroke: '#6c4cb8' };
 const PERI: Col = { fill: '#8aa8ff', stroke: '#4c69c9' };
 const RASP: Col = { fill: '#f5628a', stroke: '#b8325a' };
+const DANDY: Col = { fill: '#ffd83a', stroke: '#c98d12' };
+const DANDY_IN: Col = { fill: '#ffbb2a', stroke: '#c47a12' };
+const DANDY_CORE: Col = { fill: '#ff9f1c', stroke: '#bd6410' };
+const PEACE: Col = { fill: '#fffaf7', stroke: '#cf9fb3' };
+const CORN: Col = { fill: '#4d7cff', stroke: '#2a46ad' };
+const CORN_IN: Col = { fill: '#7a5ae0', stroke: '#47309a' };
+const SNOW: Col = { fill: '#fbfdf8', stroke: '#93aa9b' };
+const SAGE: Col = { fill: '#9cc79e', stroke: '#55856a' };
+const TIGER: Col = { fill: '#ff8a2e', stroke: '#c4521a' };
+const HEART: Col = { fill: '#ff86b6', stroke: '#c23d6e' };
+const GOLD: Col = { fill: '#ffc53d', stroke: '#b8741a' };
+const FROST: Col = { fill: '#b8deff', stroke: '#5b8fc4' };
+const JADE: Col = { fill: '#5fe0c8', stroke: '#23877a' };
+const MOON: Col = { fill: '#fdfbff', stroke: '#a597d6' };
+const MOONGLOW: Col = { fill: '#c9b4ff', stroke: '#8a6fd0' };
+const FIRE: Col = { fill: '#ff7a2a', stroke: '#b8321e' };
 
 function hx(h: string): number[] {
   const n = parseInt(h.slice(1), 16);
@@ -168,15 +219,35 @@ function sparkle(ctx: C, x: number, y: number, r: number): void {
 }
 
 let LST: Style | null = null;
-function leaf(ctx: C, len: number, wid: number, bend: number, ow: number = OW): void {
+/** Half-width profile and bend offset of the jagged (dandelion) leaf at fraction y along it. */
+function jw(wid: number, y: number): number { return Math.sin(Math.PI * Math.min(0.97, 0.08 + y * 0.92)) * wid * 1.15; }
+function jb(bend: number, y: number): number { return bend * Math.sin(Math.PI * y) * 0.9; }
+function leaf(ctx: C, len: number, wid: number, bend: number, ow: number = OW, lst: Style | null = null, jag = false): void {
   if (len < 0.5) return;
-  const st = LST || (LST = sty(LEAF));
+  const st = lst || LST || (LST = sty(LEAF));
   ctx.save();
   ctx.scale(len, len);
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(wid * 1.15 + bend, -0.22, wid * 0.95 + bend, -0.72, bend * 0.1, -1);
-  ctx.bezierCurveTo(-wid * 0.9 + bend, -0.72, -wid * 1.15 + bend, -0.22, 0, 0);
+  if (jag) {
+    // dandelion-style leaf: teeth that point back towards the base ("dent de lion")
+    ctx.lineTo(jw(wid, 0.1) * 0.5 + jb(bend, 0.1), -0.1);
+    for (let k = 0; k < 4; k++) {
+      const y0 = 0.1 + k * 0.2, y1 = y0 + 0.2;
+      ctx.quadraticCurveTo(jw(wid, y0) * 0.95 + jb(bend, y0), -y0 - 0.03, jw(wid, y1) * 1.12 + jb(bend, y1), -y1 + 0.07);
+      ctx.lineTo(jw(wid, y1) * 0.5 + jb(bend, y1), -y1);
+    }
+    ctx.quadraticCurveTo(wid * 0.25 + jb(bend, 0.95), -0.97, jb(bend, 1), -1.03);
+    ctx.quadraticCurveTo(-wid * 0.25 + jb(bend, 0.95), -0.97, -jw(wid, 0.9) * 0.5 + jb(bend, 0.9), -0.9);
+    for (let k = 3; k >= 0; k--) {
+      const y0 = 0.1 + k * 0.2, y1 = y0 + 0.2;
+      ctx.lineTo(-jw(wid, y1) * 1.12 + jb(bend, y1), -y1 + 0.07);
+      ctx.quadraticCurveTo(-jw(wid, y0) * 0.95 + jb(bend, y0), -y0 - 0.03, -jw(wid, y0) * 0.5 + jb(bend, y0), -y0);
+    }
+  } else {
+    ctx.bezierCurveTo(wid * 1.15 + bend, -0.22, wid * 0.95 + bend, -0.72, bend * 0.1, -1);
+    ctx.bezierCurveTo(-wid * 0.9 + bend, -0.72, -wid * 1.15 + bend, -0.22, 0, 0);
+  }
   ctx.closePath();
   ctx.fillStyle = gPg(ctx, st);
   ctx.fill();
@@ -739,6 +810,473 @@ function headDahlia(ctx: C, st: Style): void {
   ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
 }
 
+// ---------------------------------------------------------------- new heads
+function strap(ctx: C, len: number, w: number): void {
+  // thin ray floret with a little toothed, squared-off tip
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.4, 0);
+  ctx.lineTo(-w, -len * 0.9);
+  ctx.lineTo(-w * 0.55, -len);
+  ctx.lineTo(0, -len * 0.95);
+  ctx.lineTo(w * 0.55, -len);
+  ctx.lineTo(w, -len * 0.9);
+  ctx.lineTo(w * 0.4, 0);
+  ctx.closePath();
+}
+// dandelion layers: [count, length, half-width, rotation offset]
+const DANDY_RINGS = [[26, 1, 0.085, 0], [22, 0.8, 0.085, 0.13], [18, 0.6, 0.09, 0.05], [13, 0.4, 0.095, 0.2]];
+function headDandelion(ctx: C, st: Style): void {
+  ctx.lineJoin = 'round';
+  for (let r = 0; r < DANDY_RINGS.length; r++) {
+    const [n, len, w, off] = DANDY_RINGS[r];
+    const step = TAU / n;
+    const rs = r < 2 ? st : sty(r === 2 ? DANDY_IN : DANDY_CORE);
+    ctx.save();
+    ctx.rotate(off);
+    ctx.fillStyle = r === 0 ? gDg(ctx, rs) : gPg(ctx, rs);
+    ctx.strokeStyle = rs.stroke; ctx.lineWidth = LW * 0.8;
+    for (let i = 0; i < n; i++) { ctx.rotate(step); strap(ctx, len, w); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  }
+  // a tight orange heart of unopened florets
+  ctx.beginPath();
+  for (let i = 0; i < 9; i++) {
+    const a = i * 2.4, d = i === 0 ? 0 : 0.1 + 0.04 * (i % 3);
+    const px = Math.cos(a) * d, py = Math.sin(a) * d;
+    ctx.moveTo(px + 0.055, py); ctx.arc(px, py, 0.055, 0, TAU);
+  }
+  ctx.fillStyle = '#f08a12'; ctx.fill();
+  ctx.strokeStyle = '#bd6410'; ctx.lineWidth = LW * 0.6; ctx.stroke();
+  // glints
+  ctx.beginPath();
+  ctx.ellipse(-0.42, -0.55, 0.05, 0.16, -0.65, 0, TAU);
+  ctx.ellipse(-0.6, -0.12, 0.035, 0.1, -1.2, 0, TAU);
+  ctx.ellipse(-0.2, -0.36, 0.035, 0.09, -0.5, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fill();
+}
+
+let gPeace: CanvasGradient | null = null;
+function notchPetal(ctx: C, w: number): void {
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-w * 0.9, -0.12, -w * 1.2, -0.78, -w * 0.52, -0.97);
+  ctx.quadraticCurveTo(-w * 0.18, -1.04, 0, -0.9);
+  ctx.quadraticCurveTo(w * 0.18, -1.04, w * 0.52, -0.97);
+  ctx.bezierCurveTo(w * 1.2, -0.78, w * 0.9, -0.12, 0, 0);
+  ctx.closePath();
+}
+function headPeace(ctx: C, st: Style): void {
+  if (!gPeace) {
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, '#ff7fb4'); g.addColorStop(0.2, '#ffb3d2'); g.addColorStop(0.45, '#ffeaf2'); g.addColorStop(0.75, '#fffbfc'); g.addColorStop(1, '#ffffff');
+    gPeace = g;
+  }
+  const step = TAU / 6;
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  ctx.fillStyle = gPeace;
+  ctx.save();
+  for (let i = 0; i < 6; i++) { ctx.rotate(step); notchPetal(ctx, 0.56); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  // soft pink veins
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(step);
+    ctx.moveTo(0, -0.25); ctx.lineTo(0, -0.62);
+    ctx.moveTo(-0.09, -0.27); ctx.quadraticCurveTo(-0.17, -0.45, -0.2, -0.56);
+    ctx.moveTo(0.09, -0.27); ctx.quadraticCurveTo(0.17, -0.45, 0.2, -0.56);
+  }
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = '#e07aa6'; ctx.lineWidth = LW * 0.6; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.restore();
+  // stamen ring + green-gold centre
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = i * TAU / 10, px = Math.cos(a) * 0.25, py = Math.sin(a) * 0.25;
+    ctx.moveTo(px + 0.045, py); ctx.arc(px, py, 0.045, 0, TAU);
+  }
+  ctx.fillStyle = '#f2c53a'; ctx.fill();
+  centreDisc(ctx, 0.19, '#f6ffc0', '#d6e46c', '#9fb534', '#7a9228', 0);
+}
+
+function trumpet(ctx: C, r0: number, len: number, w: number): void {
+  // a cornflower floret: thin tube flaring into a toothed fan
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.16, -r0);
+  ctx.quadraticCurveTo(-w * 0.2, -len * 0.62, -w, -len * 0.9);
+  for (let k = 0; k < 5; k++) {
+    const x = -w * 0.8 + k * w * 0.4;
+    ctx.lineTo(x, -len * (1.0 - 0.05 * (x / w) * (x / w)));
+    if (k < 4) ctx.lineTo(x + w * 0.2, -len * 0.89);
+  }
+  ctx.lineTo(w, -len * 0.9);
+  ctx.quadraticCurveTo(w * 0.2, -len * 0.62, w * 0.16, -r0);
+  ctx.closePath();
+}
+function headCornflower(ctx: C, st: Style): void {
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  ctx.save();
+  ctx.fillStyle = gDg(ctx, st);
+  ctx.rotate(0.3);
+  for (let i = 0; i < 9; i++) { ctx.rotate(TAU / 9); trumpet(ctx, 0.15, 1, 0.27); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = gPg(ctx, st);
+  for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); trumpet(ctx, 0.15, 0.84, 0.25); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  // glints on the frilly fans
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); ctx.ellipse(-0.1, -0.68, 0.035, 0.1, 0.35, 0, TAU); }
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fill();
+  ctx.restore();
+  // little violet inner florets
+  const vi = sty(CORN_IN);
+  ctx.save();
+  ctx.rotate(0.2);
+  ctx.fillStyle = gPg(ctx, vi); ctx.strokeStyle = vi.stroke;
+  for (let i = 0; i < 9; i++) { ctx.rotate(TAU / 9); trumpet(ctx, 0.05, 0.42, 0.1); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  // dark violet centre with pale stamen tips
+  ctx.beginPath(); ctx.arc(0, 0, 0.17, 0, TAU);
+  ctx.fillStyle = '#4a2f8a'; ctx.fill();
+  ctx.strokeStyle = '#2f1d5e'; ctx.lineWidth = LW * 0.8; ctx.stroke();
+  ctx.beginPath();
+  for (let i = 0; i < 7; i++) {
+    const a = i * 2.4 + 0.3, d = 0.04 + 0.08 * ((i * 0.618) % 1);
+    const px = Math.cos(a) * d, py = Math.sin(a) * d;
+    ctx.moveTo(px + 0.028, py); ctx.arc(px, py, 0.028, 0, TAU);
+  }
+  ctx.fillStyle = '#c9b8ff'; ctx.fill();
+}
+
+// tiger lily: spots on each petal [x, y, r]
+const LILY_SPOTS = [-0.05, -0.26, 0.034, 0.07, -0.33, 0.03, -0.08, -0.43, 0.03, 0.05, -0.5, 0.034, -0.03, -0.6, 0.026, 0.1, -0.6, 0.024, -0.09, -0.68, 0.022];
+function lilyPetal(ctx: C, len: number, w: number): void {
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-w * 1.25, -len * 0.2, -w * 1.1, -len * 0.76, 0, -len);
+  ctx.bezierCurveTo(w * 1.1, -len * 0.76, w * 1.25, -len * 0.2, 0, 0);
+  ctx.closePath();
+}
+function tigerPetal(ctx: C, st: Style, len: number, w: number): void {
+  lilyPetal(ctx, len, w);
+  ctx.fill(); ctx.stroke();
+  // the tip rolls backwards: show its darker underside, with a light rim along the fold
+  ctx.save();
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(-w, -len * 0.74);
+  ctx.quadraticCurveTo(0, -len * 0.86, w, -len * 0.74);
+  ctx.lineTo(w, -len * 1.1); ctx.lineTo(-w, -len * 1.1);
+  ctx.closePath();
+  ctx.fillStyle = st.deep; ctx.globalAlpha = 0.75; ctx.fill();
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-w, -len * 0.74); ctx.quadraticCurveTo(0, -len * 0.86, w, -len * 0.74);
+  ctx.strokeStyle = st.light; ctx.lineWidth = LW * 1.4; ctx.stroke();
+  ctx.restore();
+  // midline groove
+  ctx.save();
+  ctx.globalAlpha = 0.4; ctx.strokeStyle = '#fff1b0'; ctx.lineWidth = LW * 1.2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, -len * 0.12); ctx.lineTo(0, -len * 0.7); ctx.stroke();
+  ctx.restore();
+  // spots
+  ctx.beginPath();
+  for (let i = 0; i < LILY_SPOTS.length; i += 3) {
+    const x = LILY_SPOTS[i] * len, y = LILY_SPOTS[i + 1] * len, r = LILY_SPOTS[i + 2] * len;
+    ctx.moveTo(x + r, y); ctx.ellipse(x, y, r, r * 1.3, 0, 0, TAU);
+  }
+  ctx.fillStyle = 'rgba(122,36,24,0.85)'; ctx.fill();
+  // glint
+  ctx.beginPath(); ctx.ellipse(-w * 0.45, -len * 0.42, w * 0.13, len * 0.13, 0.15, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fill();
+}
+function headTigerLily(ctx: C, st: Style): void {
+  const step = TAU / 3;
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  ctx.save();
+  ctx.rotate(step / 2);
+  ctx.fillStyle = gDg(ctx, st);
+  for (let i = 0; i < 3; i++) { ctx.rotate(step); tigerPetal(ctx, st, 1, 0.3); ctx.strokeStyle = st.stroke; ctx.fillStyle = gDg(ctx, st); }
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = gPg(ctx, st);
+  for (let i = 0; i < 3; i++) { ctx.rotate(step); tigerPetal(ctx, st, 0.96, 0.32); ctx.strokeStyle = st.stroke; ctx.fillStyle = gPg(ctx, st); }
+  ctx.restore();
+  // throat
+  ctx.beginPath(); ctx.arc(0, 0, 0.13, 0, TAU);
+  ctx.fillStyle = '#ffcf5a'; ctx.fill();
+  // long stamens with dark red anthers, plus the green pistil
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.rotate(0.35);
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(TAU / 6);
+    const bend = i % 2 ? 0.12 : -0.12, len = i % 2 ? 0.98 : 0.9;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(bend, -len * 0.55, bend * 0.4, -len);
+    ctx.strokeStyle = '#c4521a'; ctx.lineWidth = 0.05; ctx.stroke();
+    ctx.strokeStyle = '#ffd08a'; ctx.lineWidth = 0.025; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(bend * 0.4, -len - 0.02, 0.1, 0.045, 0.15, 0, TAU);
+    ctx.fillStyle = '#8a1e2a'; ctx.fill();
+    ctx.strokeStyle = '#5e1420'; ctx.lineWidth = LW * 0.6; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(bend * 0.4 - 0.04, -len - 0.035, 0.035, 0.014, 0.15, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-0.08, -0.4, 0.04, -0.72);
+  ctx.strokeStyle = '#4a8a37'; ctx.lineWidth = 0.065; ctx.stroke();
+  ctx.strokeStyle = '#9ed36e'; ctx.lineWidth = 0.035; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0.04, -0.74, 0.05, 0, TAU);
+  ctx.fillStyle = '#9ed36e'; ctx.fill(); ctx.strokeStyle = '#4a8a37'; ctx.lineWidth = LW * 0.6; ctx.stroke();
+  ctx.restore();
+}
+
+function heartPetal(ctx: C): void {
+  ctx.beginPath();
+  ctx.moveTo(0, -0.06);
+  ctx.bezierCurveTo(-0.28, -0.2, -0.6, -0.46, -0.52, -0.8);
+  ctx.bezierCurveTo(-0.44, -1.06, -0.1, -1.06, 0, -0.84);
+  ctx.bezierCurveTo(0.1, -1.06, 0.44, -1.06, 0.52, -0.8);
+  ctx.bezierCurveTo(0.6, -0.46, 0.28, -0.2, 0, -0.06);
+  ctx.closePath();
+}
+function headHeart(ctx: C, st: Style): void {
+  const step = TAU / 5;
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  ctx.fillStyle = gRg(ctx, st);
+  ctx.save();
+  ctx.rotate(-step / 2);
+  for (let i = 0; i < 5; i++) { ctx.rotate(step); heartPetal(ctx); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+  // a crease into each heart's dip, and shiny glints on the lobes
+  ctx.save();
+  ctx.rotate(-step / 2);
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) { ctx.rotate(step); ctx.moveTo(0, -0.84); ctx.quadraticCurveTo(0.02, -0.74, 0, -0.66); }
+  ctx.globalAlpha = 0.4; ctx.lineWidth = LW * 0.8; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    ctx.rotate(step);
+    ctx.ellipse(-0.3, -0.8, 0.055, 0.11, -0.6, 0, TAU);
+    ctx.moveTo(0.33, -0.89); ctx.arc(0.3, -0.89, 0.03, 0, TAU);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fill();
+  ctx.restore();
+  centreDisc(ctx, 0.2, '#fff3a8', '#ffd45c', '#eca82c', '#c99a22', 6);
+}
+
+// lotus (side view): petals [angle, length, width, row]; row 0 = low outer, 1 = back fan, 2 = front
+const LOTUS = [
+  -1.62, 0.6, 0.27, 0, 1.62, 0.6, 0.27, 0,
+  -1.12, 0.84, 0.3, 1, 1.12, 0.84, 0.3, 1, -0.58, 1.0, 0.31, 1, 0.58, 1.0, 0.31, 1, 0, 1.08, 0.31, 1,
+  -0.82, 0.8, 0.33, 2, 0.82, 0.8, 0.33, 2, -0.32, 0.9, 0.34, 2, 0.32, 0.9, 0.34, 2,
+];
+function lotusPetal(ctx: C, len: number, w: number): void {
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-w * 1.15, -len * 0.12, -w * 1.15, -len * 0.62, 0, -len);
+  ctx.bezierCurveTo(w * 1.15, -len * 0.62, w * 1.15, -len * 0.12, 0, 0);
+  ctx.closePath();
+}
+function snowflake(ctx: C, x: number, y: number, r: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = i * Math.PI / 3 + 0.26, c = Math.cos(a) * r, s = Math.sin(a) * r;
+    ctx.moveTo(x - c, y - s); ctx.lineTo(x + c, y + s);
+  }
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * 0.28, 0, TAU); ctx.fill();
+}
+function headLotus(ctx: C, st: Style, frost: boolean): void {
+  const pulse = 0.5 + 0.5 * Math.sin(CT * 1.8 + PH);
+  // glow halo
+  ctx.save();
+  ctx.translate(0, -0.5);
+  ctx.scale(1.75, 1.6);
+  ctx.globalAlpha = 0.45 + 0.35 * pulse;
+  ctx.fillStyle = gHalo(ctx, st);
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.restore();
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke;
+  for (let i = 0; i < LOTUS.length; i += 4) {
+    const a = LOTUS[i], len = LOTUS[i + 1], w = LOTUS[i + 2], row = LOTUS[i + 3];
+    ctx.save();
+    ctx.translate(Math.sin(a) * 0.1, row === 2 ? 0.02 : 0);
+    ctx.rotate(a);
+    lotusPetal(ctx, len, w);
+    ctx.fillStyle = row === 2 ? gPg(ctx, st) : gDg(ctx, st);
+    ctx.fill(); ctx.stroke();
+    ctx.lineCap = 'round';
+    if (frost) {
+      // crystalline facets
+      ctx.beginPath();
+      ctx.moveTo(0, -len * 0.08); ctx.lineTo(0, -len * 0.92);
+      ctx.moveTo(-w * 0.75, -len * 0.3); ctx.lineTo(0, -len * 0.5); ctx.lineTo(w * 0.75, -len * 0.3);
+      ctx.moveTo(-w * 0.55, -len * 0.62); ctx.lineTo(0, -len * 0.78); ctx.lineTo(w * 0.55, -len * 0.62);
+      ctx.globalAlpha = 0.55; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = LW * 1.1; ctx.stroke();
+      ctx.globalAlpha = 0.3; ctx.strokeStyle = st.stroke; ctx.lineWidth = LW * 0.5; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, -len * 0.12); ctx.lineTo(0, -len * 0.8);
+      ctx.moveTo(-w * 0.35, -len * 0.18); ctx.quadraticCurveTo(-w * 0.55, -len * 0.5, -w * 0.25, -len * 0.75);
+      ctx.moveTo(w * 0.35, -len * 0.18); ctx.quadraticCurveTo(w * 0.55, -len * 0.5, w * 0.25, -len * 0.75);
+      ctx.globalAlpha = 0.25; ctx.strokeStyle = st.stroke; ctx.lineWidth = LW * 0.6; ctx.stroke();
+    }
+    // shimmer: a glint that sweeps across the petals
+    const s = Math.max(0, Math.sin(CT * 2.2 - i * 0.22 + PH));
+    ctx.globalAlpha = (row === 0 ? 0.2 : 0.35) + 0.55 * s * s;
+    ctx.beginPath(); ctx.ellipse(-w * 0.42, -len * (0.5 + 0.1 * s), w * 0.12, len * 0.17, 0.12, 0, TAU);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = st.stroke; ctx.lineWidth = LW;
+    ctx.restore();
+  }
+  // twinkles (snowflakes for frost, sparkles for gold)
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#ffffff'; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const tw = Math.max(0, Math.sin(CT * 2.3 + PH + i * 2.1));
+    if (tw < 0.05) continue;
+    const x = (i - 1) * 0.95 + Math.sin(PH + i) * 0.1, y = -1.05 - (i === 1 ? 0.2 : 0) + (i === 1 ? 0 : 0.25);
+    ctx.globalAlpha = tw;
+    if (frost) { ctx.lineWidth = 0.045; snowflake(ctx, x, y, 0.1 + 0.08 * tw); }
+    else { sparkle(ctx, x, y, 0.1 + 0.14 * tw); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+}
+
+let gMoon: CanvasGradient | null = null;
+function headMoon(ctx: C, st: Style): void {
+  const pulse = 0.5 + 0.5 * Math.sin(CT * 1.6 + PH);
+  // lilac night glow
+  ctx.save();
+  ctx.scale(1.95, 1.95);
+  ctx.globalAlpha = 0.4 + 0.45 * pulse;
+  ctx.fillStyle = gHalo(ctx, sty(MOONGLOW));
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.restore();
+  if (!gMoon) {
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, '#cdb8ff'); g.addColorStop(0.3, '#ece4ff'); g.addColorStop(0.62, '#fdfbff'); g.addColorStop(1, '#ffffff');
+    gMoon = g;
+  }
+  // star-shaped trumpet face: five points joined by gently scalloped edges
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU - Math.PI / 2, am = a + Math.PI / 5, an = a + TAU / 5;
+    if (i === 0) ctx.moveTo(Math.cos(a), Math.sin(a));
+    ctx.quadraticCurveTo(Math.cos(am) * 0.66, Math.sin(am) * 0.66, Math.cos(an), Math.sin(an));
+  }
+  ctx.closePath();
+  ctx.fillStyle = gMoon; ctx.fill();
+  ctx.lineJoin = 'round'; ctx.lineWidth = LW; ctx.strokeStyle = st.stroke; ctx.stroke();
+  // pale star pattern and ribs
+  ctx.save();
+  ctx.globalAlpha = 0.22; ctx.fillStyle = '#b9a2ff';
+  starPath(ctx, 0.92); ctx.fill();
+  ctx.globalAlpha = 0.5; ctx.strokeStyle = '#b6a4ec'; ctx.lineWidth = LW * 0.8; ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU - Math.PI / 2;
+    ctx.moveTo(Math.cos(a) * 0.2, Math.sin(a) * 0.2); ctx.lineTo(Math.cos(a) * 0.93, Math.sin(a) * 0.93);
+  }
+  ctx.stroke();
+  ctx.restore();
+  // throat + creamy stamens
+  centreDisc(ctx, 0.15, '#fffbe6', '#f6efb8', '#dccf80', '#b8aa5c', 0);
+  // tiny crescent moon
+  const tw = 0.7 + 0.3 * pulse;
+  ctx.save();
+  ctx.translate(0.78, -0.86);
+  ctx.globalAlpha = tw;
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.2, 0.9, 0.9 + 4.6);
+  ctx.arc(0.08, -0.06, 0.16, 0.9 + 4.15, 1.4, true);
+  ctx.closePath();
+  ctx.fillStyle = '#fff1a8'; ctx.fill();
+  ctx.strokeStyle = '#d9b84a'; ctx.lineWidth = LW * 0.8; ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  const t2 = Math.max(0, Math.sin(CT * 2.4 + PH + 1));
+  sparkle(ctx, 0.3, 0.12, 0.05 + 0.08 * t2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+let gFireOut: CanvasGradient | null = null, gFireIn: CanvasGradient | null = null;
+function flamePetal(ctx: C, w: number, k: number): void {
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-w * 1.25, -0.14, -w * 1.25, -0.56, -w * 0.45 + k * 0.4, -0.76);
+  ctx.quadraticCurveTo(-w * 0.1 + k * 0.9, -0.88, k * 1.6 - w * 0.12, -1.05);
+  ctx.quadraticCurveTo(w * 0.42 + k, -0.86, w * 0.62 + k * 0.4, -0.7);
+  ctx.bezierCurveTo(w * 1.25, -0.5, w * 1.15, -0.14, 0, 0);
+  ctx.closePath();
+}
+function headPhoenix(ctx: C): void {
+  if (!gFireOut) {
+    let g = ctx.createLinearGradient(0, 0, 0, -1);
+    g.addColorStop(0, '#c81e3c'); g.addColorStop(0.4, '#ff4a2a'); g.addColorStop(0.75, '#ff9a2a'); g.addColorStop(1, '#ffd85a');
+    gFireOut = g;
+    g = ctx.createLinearGradient(0, 0, 0, -1);
+    g.addColorStop(0, '#ff6a1a'); g.addColorStop(0.5, '#ffb52e'); g.addColorStop(1, '#fff2a0');
+    gFireIn = g;
+  }
+  const fs = sty(FIRE);
+  const pulse = 0.5 + 0.5 * Math.sin(CT * 3.1 + PH);
+  // warm glow
+  ctx.save();
+  ctx.translate(0, -0.3);
+  ctx.scale(1.9, 1.9);
+  ctx.globalAlpha = 0.45 + 0.3 * pulse;
+  ctx.fillStyle = gHalo(ctx, fs);
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.restore();
+  ctx.lineJoin = 'round';
+  // outer crown of flames: longest at the top, swept upwards
+  ctx.fillStyle = gFireOut; ctx.strokeStyle = '#a3202e'; ctx.lineWidth = LW;
+  for (let i = 0; i < 11; i++) {
+    const a0 = (i / 11) * TAU + Math.PI / 11 - Math.PI;
+    const a = a0 * 0.92;
+    const len = 0.6 + 0.48 * (0.5 + 0.5 * Math.cos(a0));
+    const k = Math.sin(CT * 5.2 + i * 1.7 + PH) * 0.06 + Math.sin(CT * 8.3 + i) * 0.025 - Math.sin(a) * 0.08;
+    ctx.save(); ctx.rotate(a); ctx.scale(len, len); ctx.lineWidth = LW / len;
+    flamePetal(ctx, 0.25, k); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  // inner flames
+  ctx.fillStyle = gFireIn!; ctx.strokeStyle = '#d0661a';
+  for (let i = 0; i < 8; i++) {
+    const a0 = (i / 8) * TAU + Math.PI / 8 - Math.PI;
+    const a = a0 * 0.9;
+    const len = 0.5 + 0.22 * (0.5 + 0.5 * Math.cos(a0));
+    const k = Math.sin(CT * 6.1 + i * 2.3 + PH) * 0.07 - Math.sin(a) * 0.06;
+    ctx.save(); ctx.rotate(a); ctx.scale(len, len); ctx.lineWidth = LW / len;
+    flamePetal(ctx, 0.3, k); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath(); ctx.ellipse(-0.1 + k * 0.5, -0.55, 0.05, 0.16, 0.15, 0, TAU);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.fillStyle = gFireIn!; ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  // golden centre
+  centreDisc(ctx, 0.2, '#fffbe0', '#ffd84a', '#f0a020', '#c27a14', 5);
+  // embers drifting up
+  for (let i = 0; i < 6; i++) {
+    const p = (CT * 0.42 + i / 6 + PH * 0.05) % 1;
+    const x = Math.sin(i * 2.3 + PH) * 0.75 + Math.sin(CT * 2.1 + i * 1.3) * 0.08 * p;
+    const y = -0.5 - p * 1.25;
+    const r = 0.06 * (1 - p) + 0.02;
+    ctx.globalAlpha = Math.sin(p * Math.PI);
+    ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, TAU);
+    ctx.fillStyle = 'rgba(255,160,60,0.35)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = '#ffe48a'; ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 // ---------------------------------------------------------------- config
 interface KC { stem: number; r: number; spin: boolean }
 const CFG: Record<FlowerKind, KC> = {
@@ -757,6 +1295,17 @@ const CFG: Record<FlowerKind, KC> = {
   rose: { stem: 0.78, r: 0.21, spin: true },
   starbloom: { stem: 0.74, r: 0.22, spin: false },
   rainbowbloom: { stem: 0.74, r: 0.27, spin: true },
+  dandelion: { stem: 0.64, r: 0.22, spin: true },
+  peacebloom: { stem: 0.74, r: 0.24, spin: true },
+  cornflower: { stem: 0.8, r: 0.22, spin: true },
+  snowdrop: { stem: 1.0, r: 0.2, spin: false },
+  tigerlily: { stem: 0.8, r: 0.27, spin: true },
+  heartblossom: { stem: 0.72, r: 0.24, spin: true },
+  goldenlotus: { stem: 0.62, r: 0.3, spin: false },
+  frostlotus: { stem: 0.62, r: 0.3, spin: false },
+  jadevine: { stem: 1.0, r: 0.1, spin: false },
+  moonflower: { stem: 0.74, r: 0.25, spin: true },
+  phoenixbloom: { stem: 0.72, r: 0.27, spin: false },
 };
 
 // leaf specs: [t along stem, side(-1/1), length (fraction of H), half-width, angle from stem, bend]
@@ -776,7 +1325,22 @@ const LEAVES: Record<FlowerKind, readonly number[][]> = {
   rose: [[0.18, -1, 0.2, 0.13, 1.05, 0.14], [0.38, 1, 0.19, 0.13, 0.9, 0.12], [0.55, -1, 0.14, 0.12, 0.8, 0.1]],
   starbloom: [[0.14, -1, 0.24, 0.13, 1.1, 0.14], [0.32, 1, 0.21, 0.12, 0.95, 0.12]],
   rainbowbloom: [[0.14, -1, 0.26, 0.14, 1.1, 0.14], [0.32, 1, 0.22, 0.13, 0.95, 0.12]],
+  dandelion: [[0.0, -1, 0.37, 0.17, 1.25, 0.08], [0.0, 1, 0.34, 0.16, 1.2, 0.08], [0.01, -1, 0.3, 0.15, 0.7, 0.1], [0.01, 1, 0.26, 0.14, 0.62, 0.1]],
+  peacebloom: [[0.12, -1, 0.28, 0.15, 1.1, 0.14], [0.3, 1, 0.24, 0.14, 0.95, 0.12]],
+  cornflower: [[0.14, -1, 0.3, 0.07, 0.8, 0.18], [0.3, 1, 0.27, 0.07, 0.75, 0.16], [0.48, -1, 0.2, 0.06, 0.7, 0.12]],
+  snowdrop: [[0.01, -1, 0.52, 0.06, 0.3, 0.06], [0.02, 1, 0.46, 0.06, 0.42, 0.08]],
+  tigerlily: [[0.12, -1, 0.24, 0.08, 1.0, 0.14], [0.22, 1, 0.24, 0.08, 0.95, 0.14], [0.34, -1, 0.21, 0.08, 0.9, 0.12], [0.46, 1, 0.19, 0.07, 0.85, 0.12], [0.58, -1, 0.15, 0.07, 0.8, 0.1]],
+  heartblossom: [[0.14, -1, 0.24, 0.16, 1.1, 0.14], [0.32, 1, 0.22, 0.15, 0.95, 0.12]],
+  goldenlotus: [[0.04, -1, 0.32, 0.24, 1.2, 0.12], [0.08, 1, 0.28, 0.24, 1.1, 0.1]],
+  frostlotus: [[0.04, -1, 0.32, 0.24, 1.2, 0.12], [0.08, 1, 0.28, 0.24, 1.1, 0.1]],
+  jadevine: [[0.18, -1, 0.24, 0.14, 1.0, 0.14], [0.36, 1, 0.22, 0.13, 0.9, 0.12], [0.56, -1, 0.16, 0.12, 0.7, 0.1]],
+  moonflower: [[0.14, -1, 0.26, 0.17, 1.1, 0.14], [0.32, 1, 0.22, 0.15, 0.95, 0.12]],
+  phoenixbloom: [[0.14, -1, 0.26, 0.13, 1.1, 0.14], [0.32, 1, 0.22, 0.12, 0.95, 0.12]],
 };
+/** Leaf colour per kind (default: LEAF green). */
+function leafStyle(kind: FlowerKind): Style | null {
+  return kind === 'snowdrop' || kind === 'cornflower' ? sty(SAGE) : null;
+}
 
 function kindColor(kind: FlowerKind, seed: number): Col {
   switch (kind) {
@@ -793,6 +1357,17 @@ function kindColor(kind: FlowerKind, seed: number): Col {
     case 'sunflower': return PETALS.butter;
     case 'rose': return pick([PETALS.coral, PETALS.pink, RASP], seed, 5);
     case 'starbloom': return pick([PETALS.butter, PETALS.butter, PETALS.pink, PETALS.sky], seed, 5);
+    case 'dandelion': return DANDY;
+    case 'peacebloom': return PEACE;
+    case 'cornflower': return CORN;
+    case 'snowdrop': return SNOW;
+    case 'tigerlily': return TIGER;
+    case 'heartblossom': return HEART;
+    case 'goldenlotus': return GOLD;
+    case 'frostlotus': return FROST;
+    case 'jadevine': return JADE;
+    case 'moonflower': return MOON;
+    case 'phoenixbloom': return FIRE;
     default: return PETALS.pink;
   }
 }
@@ -845,6 +1420,14 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
     SX[1] = 0; SY[1] = -0.8 * H;
     SX[2] = dir * 0.1 * H; SY[2] = -1.0 * H;
     SX[3] = dir * 0.33 * H; SY[3] = -0.84 * H;
+  } else if (kind === 'snowdrop') {
+    SX[1] = dir * 0.02 * H; SY[1] = -0.8 * H;
+    SX[2] = dir * 0.16 * H; SY[2] = -1.0 * H;
+    SX[3] = dir * 0.27 * H; SY[3] = -0.8 * H;
+  } else if (kind === 'jadevine') {
+    SX[1] = -dir * 0.06 * H; SY[1] = -0.85 * H;
+    SX[2] = dir * 0.12 * H; SY[2] = -1.06 * H;
+    SX[3] = dir * 0.24 * H; SY[3] = -0.92 * H;
   } else {
     SX[1] = lean * 0.04 * H; SY[1] = -L * 0.33;
     SX[2] = lean * 0.09 * H; SY[2] = -L * 0.66;
@@ -887,6 +1470,7 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
   // ---- leaves
   if (g2 > 0 && kind !== 'sprout') {
     const spec = LEAVES[kind];
+    const lst = leafStyle(kind), jag = kind === 'dandelion';
     for (let i = 0; i < spec.length; i++) {
       const sp = spec[i];
       const u = clamp01(g2 * 1.5 - i * 0.2);
@@ -897,7 +1481,7 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
       ctx.translate(PX, PY);
       const flut = Math.sin(CT * 1.9 + PH + i * 1.7) * 0.05;
       ctx.rotate(sp[1] * lerp(0.12, sp[4], e) + flut);
-      leaf(ctx, sp[2] * H * Math.max(0.01, e), sp[3], -sp[1] * sp[5]);
+      leaf(ctx, sp[2] * H * Math.max(0.01, e), sp[3], -sp[1] * sp[5], OW, lst, jag);
       ctx.restore();
     }
   }
@@ -937,7 +1521,7 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
     ctx.bezierCurveTo(bs * 1.5, -bs * 0.5, bs * 1.2, -bs * 2.2, 0, -bs * 3);
     ctx.bezierCurveTo(-bs * 1.2, -bs * 2.2, -bs * 1.5, -bs * 0.5, 0, 0);
     ctx.closePath();
-    const bst = kind === 'sprout' || kind === 'bluebell' ? sty(LEAF) : st;
+    const bst = kind === 'sprout' || kind === 'bluebell' || kind === 'dandelion' ? sty(LEAF) : st;
     ctx.fillStyle = bst.fill; ctx.fill();
     ctx.lineWidth = OW; ctx.lineJoin = 'round'; ctx.strokeStyle = bst.stroke; ctx.stroke();
     // little green sepals
@@ -962,6 +1546,10 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
     if (g3 > 0) bluebells(ctx, st, H, g3, seed);
   } else if (kind === 'lavender') {
     if (g3 > 0) lavenderSpike(ctx, st, H, g3, seed);
+  } else if (kind === 'snowdrop') {
+    if (g3 > 0) snowdropHead(ctx, st, H, g3);
+  } else if (kind === 'jadevine') {
+    if (g3 > 0) jadeCluster(ctx, H, g3, seed, dir);
   } else if (b > 0.02) {
     const R = cfg.r * H;
     ctx.save();
@@ -985,6 +1573,15 @@ export function drawFlower(ctx: CanvasRenderingContext2D, o: FlowerOpts): void {
     else if (kind === 'rose') headRose(ctx, st);
     else if (kind === 'starbloom') headStar(ctx, st);
     else if (kind === 'rainbowbloom') headRainbow(ctx, 8 + (seed & 1));
+    else if (kind === 'dandelion') headDandelion(ctx, st);
+    else if (kind === 'peacebloom') headPeace(ctx, st);
+    else if (kind === 'cornflower') headCornflower(ctx, st);
+    else if (kind === 'tigerlily') headTigerLily(ctx, st);
+    else if (kind === 'heartblossom') headHeart(ctx, st);
+    else if (kind === 'goldenlotus') headLotus(ctx, st, false);
+    else if (kind === 'frostlotus') headLotus(ctx, st, true);
+    else if (kind === 'moonflower') headMoon(ctx, st);
+    else if (kind === 'phoenixbloom') headPhoenix(ctx);
     ctx.restore();
   }
   ctx.restore();
@@ -1124,21 +1721,158 @@ function lavGrad(ctx: C, st: Style): CanvasGradient {
   return g;
 }
 
+function dropPetal(ctx: C, w: number): void {
+  // a snowdrop petal hanging down (+y) from the origin
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-w * 1.1, 0.12, -w * 1.3, 0.7, 0, 1);
+  ctx.bezierCurveTo(w * 1.3, 0.7, w * 1.1, 0.12, 0, 0);
+  ctx.closePath();
+}
+function snowdropHead(ctx: C, st: Style, H: number, g3: number): void {
+  const e = easeOutBack(clamp01(g3 * 1.3));
+  stemAt(1);
+  const size = H * 0.23 * Math.max(0.01, e);
+  const lf = sty(LEAF);
+  ctx.save();
+  ctx.translate(PX, PY);
+  ctx.rotate(Math.sin(CT * 1.5 + PH) * 0.05);
+  ctx.scale(size, size);
+  LW = OW / Math.max(size, 1);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // little green ovary the flower hangs from
+  ctx.beginPath(); ctx.ellipse(0, 0.08, 0.12, 0.15, 0, 0, TAU);
+  ctx.fillStyle = gVg(ctx, lf); ctx.fill();
+  ctx.lineWidth = LW; ctx.strokeStyle = lf.stroke; ctx.stroke();
+  ctx.translate(0, 0.2);
+  ctx.strokeStyle = st.stroke; ctx.fillStyle = gVg(ctx, st);
+  // three long outer petals: one behind, two flaring out at the sides
+  ctx.save(); ctx.scale(0.95, 0.96); dropPetal(ctx, 0.3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = rgba(st.stroke, 0.16); ctx.fill(); ctx.restore();
+  ctx.fillStyle = gVg(ctx, st);
+  for (let sd = -1; sd <= 1; sd += 2) {
+    ctx.save(); ctx.rotate(sd * 0.5);
+    dropPetal(ctx, 0.28); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 0.35; ctx.lineWidth = LW * 0.6;
+    ctx.beginPath(); ctx.moveTo(0, 0.15); ctx.quadraticCurveTo(sd * 0.04, 0.5, 0, 0.82); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.lineWidth = LW;
+    ctx.restore();
+  }
+  // the small inner cup with its green tip mark
+  ctx.beginPath();
+  ctx.moveTo(-0.1, 0.12);
+  ctx.bezierCurveTo(-0.26, 0.24, -0.25, 0.5, -0.2, 0.64);
+  ctx.quadraticCurveTo(-0.1, 0.6, 0, 0.7);
+  ctx.quadraticCurveTo(0.1, 0.6, 0.2, 0.64);
+  ctx.bezierCurveTo(0.25, 0.5, 0.26, 0.24, 0.1, 0.12);
+  ctx.closePath();
+  ctx.fillStyle = '#f2f8ee'; ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-0.15, 0.6); ctx.quadraticCurveTo(-0.08, 0.5, 0, 0.58); ctx.quadraticCurveTo(0.08, 0.5, 0.15, 0.6);
+  ctx.quadraticCurveTo(0.08, 0.6, 0, 0.67); ctx.quadraticCurveTo(-0.08, 0.6, -0.15, 0.6);
+  ctx.fillStyle = '#6fbf4e'; ctx.fill();
+  ctx.restore();
+}
+
+let gJade: CanvasGradient | null = null;
+const RACHIS: Col = { fill: '#9c7fa8', stroke: '#664a75' };
+function clawPath(ctx: C): void {
+  // one jade vine flower: a fat claw reaching out (+x) and hooking upwards
+  ctx.beginPath();
+  ctx.moveTo(0, 0.14);
+  ctx.bezierCurveTo(0.45, 0.32, 1.0, 0.16, 1.02, -0.48);
+  ctx.quadraticCurveTo(1.0, -0.64, 0.88, -0.5);
+  ctx.bezierCurveTo(0.8, -0.12, 0.42, -0.08, 0, -0.14);
+  ctx.closePath();
+}
+function jadeCluster(ctx: C, H: number, g3: number, seed: number, dir: number): void {
+  if (!gJade) {
+    const g = ctx.createLinearGradient(0, 0.1, 0.95, -0.45);
+    g.addColorStop(0, '#2aa596'); g.addColorStop(0.45, '#5fe0c8'); g.addColorStop(1, '#d4fff3');
+    gJade = g;
+  }
+  stemAt(1);
+  const tx = PX, ty = PY;
+  const rows = 6 + (seed & 1);
+  const len = H * 0.46 * (0.2 + 0.8 * easeOutCubic(clamp01(g3 * 1.4)));
+  const cx = tx + dir * H * 0.05, cy = ty + len * 0.5, ex = tx - dir * H * 0.02, ey = ty + len;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx, cy, ex, ey);
+  const rw = Math.max(1.4, H * 0.013);
+  ctx.strokeStyle = RACHIS.stroke; ctx.lineWidth = rw + OW; ctx.stroke();
+  ctx.strokeStyle = RACHIS.fill; ctx.lineWidth = rw; ctx.stroke();
+  // tight buds at the very end
+  ctx.beginPath();
+  ctx.ellipse(ex, ey + H * 0.012, H * 0.012, H * 0.02, 0, 0, TAU);
+  ctx.ellipse(ex - H * 0.018, ey - H * 0.012, H * 0.011, H * 0.017, 0.6, 0, TAU);
+  ctx.ellipse(ex + H * 0.018, ey - H * 0.016, H * 0.011, H * 0.017, -0.6, 0, TAU);
+  ctx.fillStyle = '#3fb8a6'; ctx.fill();
+  ctx.strokeStyle = JADE.stroke; ctx.lineWidth = OW * 0.8; ctx.stroke();
+  // claws, bottom row first so the upper ones sit in front of the hooked tips below
+  for (let i = rows - 1; i >= 0; i--) {
+    const f = i / (rows - 1);
+    const u = clamp01(g3 * 1.8 - f * 0.8);
+    if (u <= 0) continue;
+    const e = easeOutBack(u);
+    const t = 0.06 + 0.82 * f, m = 1 - t;
+    const x = m * m * tx + 2 * m * t * cx + t * t * ex, y = m * m * ty + 2 * m * t * cy + t * t * ey;
+    const s = H * 0.15 * (1 - f * 0.5) * Math.max(0.01, e);
+    LW = OW / Math.max(s, 1);
+    ctx.lineWidth = LW;
+    // each whorl: claws reaching out to both sides (dipping down, tips hooking up) and one or two in front
+    for (let j = 0; j < 4; j++) {
+      const sd = j % 2 ? 1 : -1;
+      const front = j >= 2;
+      if (front && (i + j) % 2 === 1 && i !== 0) continue;
+      ctx.save();
+      ctx.translate(x + (front ? sd * s * 0.12 : 0), y + (front ? s * 0.12 : 0));
+      ctx.scale(sd * s * (front ? 0.62 : 1), s * (front ? 0.95 : 1));
+      ctx.rotate(front ? 0.7 : 0.48 + (i % 2) * 0.12 + 0.1 * f);
+      clawPath(ctx);
+      ctx.fillStyle = gJade; ctx.fill();
+      ctx.strokeStyle = JADE.stroke; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0.6, -0.08, 0.05, 0.15, 0.6, 0, TAU);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+      ctx.restore();
+    }
+    // dark calyx where the flowers join the stalk
+    ctx.beginPath(); ctx.arc(x, y, s * 0.12, 0, TAU);
+    ctx.fillStyle = '#4f6e74'; ctx.fill();
+  }
+  ctx.restore();
+}
+
 // ---------------------------------------------------------------- picking
-const KINDS: FlowerKind[] = ['sprout', 'daisy', 'clover', 'buttercup', 'tulip', 'poppy', 'bluebell', 'forgetmenot', 'lavender', 'sunflower', 'pansy', 'rose', 'dahlia', 'starbloom', 'rainbowbloom'];
-// Relative weights (normalised when picking): W0 with no streak, W1 at a streak of 20+.
-const W0 = [0.2, 0.26, 0.2, 0.14, 0.11, 0.1, 0.07, 0.07, 0.03, 0.02, 0.03, 0.01, 0.01, 0, 0];
-const W1 = [0.02, 0.07, 0.06, 0.04, 0.11, 0.11, 0.11, 0.09, 0.13, 0.12, 0.1, 0.13, 0.1, 0.07, 0.07];
+// Tier weights (normalised when picking): W0 with no streak, W1 at a streak of 20+.
+// Sprout has its own weight; the rest of each tier's share is split evenly across its kinds.
+const SPROUT_W0 = 0.14, SPROUT_W1 = 0.01;
+const TIER_W0 = [0.48, 0.29, 0.085, 0.005, 0];
+const TIER_W1 = [0.11, 0.2, 0.33, 0.25, 0.1];
+const PW0 = new Float64Array(FLOWER_KINDS.length), PW1 = new Float64Array(FLOWER_KINDS.length);
+{
+  const counts = [0, 0, 0, 0, 0];
+  for (const k of FLOWER_KINDS) if (k !== 'sprout') counts[FLOWER_RARITY[k]]++;
+  FLOWER_KINDS.forEach((k, i) => {
+    const t = FLOWER_RARITY[k];
+    PW0[i] = k === 'sprout' ? SPROUT_W0 : TIER_W0[t] / counts[t];
+    PW1[i] = k === 'sprout' ? SPROUT_W1 : TIER_W1[t] / counts[t];
+  });
+}
 
 /** Picks a kind given the player's current word streak; higher streak → better odds of rare kinds. */
 export function pickFlowerKind(combo: number, r: number): FlowerKind {
   const q = clamp01(combo / 20);
+  const n = FLOWER_KINDS.length;
   let total = 0;
-  for (let i = 0; i < KINDS.length; i++) total += W0[i] + (W1[i] - W0[i]) * q;
+  for (let i = 0; i < n; i++) total += PW0[i] + (PW1[i] - PW0[i]) * q;
   let acc = r * total;
-  for (let i = 0; i < KINDS.length; i++) {
-    acc -= W0[i] + (W1[i] - W0[i]) * q;
-    if (acc <= 0) return KINDS[i];
+  for (let i = 0; i < n; i++) {
+    const w = PW0[i] + (PW1[i] - PW0[i]) * q;
+    if (w <= 0) continue;
+    acc -= w;
+    if (acc <= 0) return FLOWER_KINDS[i];
   }
-  return KINDS[KINDS.length - 1];
+  for (let i = n - 1; i >= 0; i--) if (PW0[i] + (PW1[i] - PW0[i]) * q > 0) return FLOWER_KINDS[i];
+  return FLOWER_KINDS[0];
 }
