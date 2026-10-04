@@ -41,7 +41,7 @@ export function cpsGuessForLevel(level: number): number {
   return 4.2;
 }
 
-const TARGET_PROGRESS = 0.55;
+export const TARGET_PROGRESS = 0.55;
 const MAX_SLACK = 5;
 
 export type LevelChange = -1 | 0 | 1;

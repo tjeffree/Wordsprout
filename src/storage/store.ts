@@ -26,6 +26,8 @@ export interface Profile {
   littleWords?: boolean;
   /** No capitals: every word and sentence is lowercase, in any game. */
   noCaps?: boolean;
+  /** Slow & Steady: one word at a time that waits in the middle. */
+  steady?: boolean;
 }
 
 export interface ScoreEntry {
@@ -41,6 +43,7 @@ export interface ScoreEntry {
   bestCombo: number;
   little?: boolean;
   noCaps?: boolean;
+  steady?: boolean;
   date: number;
 }
 

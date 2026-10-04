@@ -429,7 +429,11 @@ function showModes() {
   const lv = getLevel(p.skill.level);
   const grid = h('div', { class: 'modes' });
   const modes = h('div', { class: 'rise-in', role: 'group', 'aria-label': 'Choose a game' });
-  const paint = () => modes.querySelectorAll<HTMLButtonElement>('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === mode)));
+  const toggles = gardenerToggles(p);
+  const paint = () => {
+    modes.querySelectorAll<HTMLButtonElement>('.mode').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === mode)));
+    toggles.setSpelling(mode === 'spelling');
+  };
   for (const m of games) {
     const best = store.leaderboard(m.id, 'score', 1000).find((s) => s.profileId === p.id);
     const spell = m.id === 'spelling';
@@ -458,7 +462,7 @@ function showModes() {
     h('div', { class: 'collection-label' }, `Flower collection: ${p.discovered.length} of ${ALL_KINDS.length} discovered`),
     collection,
     modes,
-    gardenerToggles(p),
+    toggles.el,
     h('div', { class: 'row modes-actions', style: 'flex-wrap:nowrap' },
       btn('Start! 🌱', 'big', go, { 'data-autofocus': true }),
       btn('🏆', 'ghost', () => showBoard('modes'), { 'aria-label': 'Leaderboard', title: 'Leaderboard' }),
@@ -476,8 +480,11 @@ function showModes() {
   });
 }
 
-/** Per-gardener options: Little Words (2-4 letter lowercase words) and No capitals (any game). */
-function gardenerToggles(p: Profile): HTMLElement {
+/**
+ * Per-gardener options: Little Words (2-4 letter lowercase words), No capitals (any game) and
+ * Slow & Steady (one word waits in the middle). None of them apply to the Spelling Bee.
+ */
+function gardenerToggles(p: Profile): { el: HTMLElement; setSpelling: (on: boolean) => void } {
   const card = (cls: string, emoji: string, title: string, detail: string, get: () => boolean, set: (v: boolean) => void) => {
     const b = h('button', { class: `little-toggle ${cls}`, type: 'button', role: 'switch' },
       h('span', { class: 'e' }, emoji),
@@ -492,9 +499,16 @@ function gardenerToggles(p: Profile): HTMLElement {
   };
   const little = card('t-little', '🐣', 'Little Words', '2, 3 and 4 letter words only', () => !!p.littleWords, (v) => { p.littleWords = v; });
   const caps = card('t-caps', '🔡', 'No capitals', 'Everything in lowercase, no Shift needed', () => !!p.noCaps || !!p.littleWords, (v) => { p.noCaps = v; if (!v) p.littleWords = false; });
-  const paintAll = () => { little.paint(); caps.paint(); };
+  const steady = card('t-steady', '🐢', 'Slow & Steady', 'One word at a time waits in the middle', () => !!p.steady, (v) => { p.steady = v; });
+  const all = [little, caps, steady];
+  const paintAll = () => all.forEach((t) => t.paint());
   paintAll();
-  return h('div', { class: 'gardener-toggles' }, little.b, caps.b);
+  const el = h('div', { class: 'gardener-toggles' }, ...all.map((t) => t.b));
+  const setSpelling = (on: boolean) => all.forEach(({ b }) => {
+    b.disabled = on;
+    b.title = on ? 'Not used in the Spelling Bee' : '';
+  });
+  return { el, setSpelling };
 }
 
 function littleOpts(p: Profile) {
@@ -526,7 +540,9 @@ function startRound(mode: Mode) {
   sound.unlock(); speech.unlock();
   if (touchDevice) focusTyping();
   renderer.clearGarden();
-  round = new Round(p.skill, mode, Math.random, { little: littleOpts(p), noCaps: !!p.noCaps, spelling: SPELLING_WORDS });
+  // The gardener toggles don't apply to the Spelling Bee (it's always lowercase, one word at a time).
+  const typing = mode.id !== 'spelling';
+  round = new Round(p.skill, mode, Math.random, { little: typing ? littleOpts(p) : null, noCaps: typing && !!p.noCaps, steady: typing && !!p.steady, spelling: SPELLING_WORDS });
   if (round.spelling) speech.preload(round.spelling.queue[0].word);
   paused = false;
   lastKeyAt = performance.now();
@@ -630,7 +646,7 @@ function updateGuide(force = false) {
     if (ch !== lastHighlight) { keyboard.highlight(ch); lastHighlight = ch; }
   }
   // Gentle nudge for little learners who are stuck.
-  if (round.level.patient && !round.spelling && !hint && !paused && performance.now() - lastKeyAt > 8000 && round.nextChar) {
+  if ((round.level.patient || round.steady) && !round.spelling && !hint && !paused && performance.now() - lastKeyAt > 8000 && round.nextChar) {
     const ch = round.nextChar;
     const finger = FINGER_OF[ch.toLowerCase()];
     showHint(ch === ' ' ? 'Press the long space bar!' : `Find the <kbd>${ch.toUpperCase()}</kbd> key${finger ? ` (${FINGER_NAME[finger]})` : ''}!`);
@@ -748,7 +764,7 @@ function finishRound() {
   p.totalFlowers += s.flowers.length;
   p.discovered = [...p.discovered, ...newKinds];
   store.updateProfile(p);
-  const rank = s.items > 0 ? store.addScore({ profileId: p.id, name: p.name, avatar: p.avatar, mode: r.mode.id, score: s.score, wpm, accuracy, flowers: s.flowers.length, level: levelEnd, bestCombo: s.bestCombo, little: !!r.little, noCaps: r.noCaps && !r.little, date: Date.now() }) : 0;
+  const rank = s.items > 0 ? store.addScore({ profileId: p.id, name: p.name, avatar: p.avatar, mode: r.mode.id, score: s.score, wpm, accuracy, flowers: s.flowers.length, level: levelEnd, bestCombo: s.bestCombo, little: !!r.little, noCaps: r.noCaps && !r.little && !r.spelling, steady: r.steady, date: Date.now() }) : 0;
 
   const stars = s.items === 0 ? 0 : 1 + (accuracy >= 0.9 ? 1 : 0) + (accuracy >= 0.96 && s.escapes <= 1 ? 1 : 0);
   const titles = [['A garden begins!', 'Every gardener starts somewhere 🌱'], ['Lovely garden!', 'Look at all those flowers!'], ['Blooming marvellous!', 'Bumble is doing happy loops!'], ['A perfect meadow!', 'Simply splendid typing ✨']];
@@ -844,7 +860,7 @@ function showBoard(from: 'title' | 'modes' | 'results') {
       h('thead', {}, h('tr', {}, h('th', {}, '#'), h('th', {}, 'Gardener'), h('th', {}, 'Score'), h('th', {}, 'WPM'), h('th', { class: 'hide-sm' }, 'Acc.'), h('th', { class: 'hide-sm' }, 'Level'), h('th', { class: 'hide-sm' }, 'When'))),
       h('tbody', {}, ...rows.map((s, i) => h('tr', { class: `${s.profileId === meId ? 'me' : ''} ${from === 'results' && s.date === latest ? 'fresh' : ''}` },
         h('td', {}, medal(i)),
-        h('td', { class: 'name' }, `${s.avatar} ${s.name}`, s.little ? h('span', { title: 'Little Words' }, ' 🐣') : null, s.noCaps ? h('span', { title: 'No capitals' }, ' 🔡') : null),
+        h('td', { class: 'name' }, `${s.avatar} ${s.name}`, s.little ? h('span', { title: 'Little Words' }, ' 🐣') : null, s.noCaps ? h('span', { title: 'No capitals' }, ' 🔡') : null, s.steady ? h('span', { title: 'Slow & Steady' }, ' 🐢') : null),
         h('td', {}, s.score.toLocaleString()),
         h('td', {}, s.wpm >= 10 ? String(Math.round(s.wpm)) : s.wpm.toFixed(1)),
         h('td', { class: 'hide-sm' }, `${Math.round(s.accuracy * 100)}%`),

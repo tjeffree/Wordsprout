@@ -204,13 +204,15 @@ test('a fast, accurate typist is promoted mid-round', async ({ page }) => {
 test('Little Words only shows 2-4 letter lowercase words', async ({ page }) => {
   await fresh(page);
   await newGardener(page, 'Nova', 'bud');
+  // The toggles are switched off while the Spelling Bee is picked.
+  await page.locator('.mode[data-id="ten"]').click();
   await page.locator('.t-little').click();
   await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'true');
   await page.reload();
   await page.getByRole('button', { name: /let.s play/i }).click();
   await page.locator('.pcard', { hasText: 'Nova' }).click();
-  await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'true');
   await page.locator('.mode[data-id="ten"]').click();
+  await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('button', { name: /^Start/ }).click();
   const seen = new Set<string>();
   for (let i = 0; i < 12; i++) {
@@ -224,12 +226,12 @@ test('Little Words only shows 2-4 letter lowercase words', async ({ page }) => {
 test('No capitals toggle makes a speedy game all lowercase', async ({ page }) => {
   await fresh(page);
   await newGardener(page, 'Lowercase', 'speedy');
+  await page.locator('.mode[data-id="stroll"]').click();
   await page.locator('.t-caps').click();
   await expect(page.locator('.t-caps')).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('.t-little')).toHaveAttribute('aria-checked', 'false');
   await page.evaluate(() => { const g = window.__game; const p = g.store.current; p.skill.level = 21; g.store.updateProfile(p); });
   // Enter on a focused toggle flips it (native button behaviour), so start with the button.
-  await page.locator('.mode[data-id="stroll"]').click();
   await page.getByRole('button', { name: /^Start/ }).click();
   await page.waitForFunction(() => window.__game.round?.puffs);
   const seen = new Set<string>();
@@ -239,6 +241,35 @@ test('No capitals toggle makes a speedy game all lowercase', async ({ page }) =>
   }
   expect(seen.size).toBeGreaterThan(2);
   for (const t of seen) expect(t).toBe(t.toLowerCase());
+});
+
+test('the gardener toggles are switched off for the Spelling Bee', async ({ page }) => {
+  await fresh(page);
+  await newGardener(page, 'Bee', 'bud');
+  await expect(page.locator('.mode.spell')).toHaveAttribute('aria-pressed', 'true');
+  for (const t of ['.t-little', '.t-caps', '.t-steady']) await expect(page.locator(t)).toBeDisabled();
+  await page.locator('.mode[data-id="ten"]').click();
+  for (const t of ['.t-little', '.t-caps', '.t-steady']) await expect(page.locator(t)).toBeEnabled();
+});
+
+test('Slow & Steady keeps one word still in the middle and marks the leaderboard', async ({ page }) => {
+  await fresh(page);
+  await newGardener(page, 'Steady', 'speedy');
+  await page.locator('.mode[data-id="ten"]').click();
+  await page.locator('.t-steady').click();
+  await expect(page.locator('.t-steady')).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: /^Start/ }).click();
+  await page.waitForFunction(() => window.__game.round?.puffs.length > 0);
+  await page.waitForTimeout(3000);
+  const puffs = await page.evaluate(() => window.__game.round.puffs.filter((p: any) => p.state === 'fly').map((p: any) => ({ patient: p.patient, progress: p.progress })));
+  expect(puffs).toHaveLength(1);
+  expect(puffs[0].patient).toBe(true);
+  expect(puffs[0].progress).toBeCloseTo(0.5, 2);
+  while (await page.evaluate(() => window.__game.screen === 'play' && window.__game.round.phase === 'play')) await typeNext(page, 5, 40);
+  await expect(page.getByRole('button', { name: /play again/i })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /leaderboard/i }).click();
+  await page.getByRole('tab', { name: /ten flowers/i }).click();
+  await expect(page.locator('.board td.name', { hasText: 'Steady' }).locator('span[title="Slow & Steady"]')).toBeVisible();
 });
 
 test('regression: long sentences wrap on narrow phones without freezing', async ({ page }) => {
