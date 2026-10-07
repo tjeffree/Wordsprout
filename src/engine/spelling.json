@@ -1,45 +1,281 @@
 {
   "voice": "en-GB-SoniaNeural",
-  "words": [
+  "weeks": [
     {
-      "word": "badge",
-      "sentence": "I got a shiny badge for swimming."
+      "name": "Week 1",
+      "test": "2026-09-16",
+      "words": [
+        {
+          "word": "knock",
+          "sentence": "Knock on the door, please."
+        },
+        {
+          "word": "know",
+          "sentence": "I know all my colours."
+        },
+        {
+          "word": "knee",
+          "sentence": "I fell over and hurt my knee."
+        },
+        {
+          "word": "knitting",
+          "sentence": "Granny is knitting me a warm scarf."
+        },
+        {
+          "word": "knife",
+          "sentence": "Mum cuts the bread with a knife."
+        },
+        {
+          "word": "gnat",
+          "sentence": "A tiny gnat flew past my nose."
+        },
+        {
+          "word": "gnaw",
+          "sentence": "The dog likes to gnaw on a bone."
+        },
+        {
+          "word": "gnash",
+          "sentence": "The dragon in the story began to gnash its teeth."
+        },
+        {
+          "word": "gnome",
+          "sentence": "There is a little gnome in the garden."
+        },
+        {
+          "word": "gnarled",
+          "sentence": "The old tree has gnarled branches."
+        }
+      ]
     },
     {
-      "word": "edge",
-      "sentence": "Don't stand too close to the edge."
+      "name": "Week 2",
+      "test": "2026-09-23",
+      "words": [
+        {
+          "word": "write",
+          "sentence": "I can write my name."
+        },
+        {
+          "word": "written",
+          "sentence": "I have written a card for Dad."
+        },
+        {
+          "word": "wrote",
+          "sentence": "She wrote a letter to her friend."
+        },
+        {
+          "word": "wrong",
+          "sentence": "Oops, I took the wrong turn."
+        },
+        {
+          "word": "wrap",
+          "sentence": "Let's wrap the present in shiny paper."
+        },
+        {
+          "word": "wrist",
+          "sentence": "My watch goes on my wrist."
+        },
+        {
+          "word": "wreck",
+          "sentence": "We found an old ship wreck on the beach."
+        },
+        {
+          "word": "wrestle",
+          "sentence": "The puppies like to wrestle on the rug."
+        },
+        {
+          "word": "wriggle",
+          "sentence": "The worm can wriggle in the mud."
+        },
+        {
+          "word": "wren",
+          "sentence": "A little wren sang in the hedge."
+        }
+      ]
     },
     {
-      "word": "bridge",
-      "sentence": "We walked over the bridge."
+      "name": "Week 3",
+      "test": "2026-09-30",
+      "words": [
+        {
+          "word": "race",
+          "sentence": "Let's have a race to the gate."
+        },
+        {
+          "word": "ice",
+          "sentence": "The pond is covered in ice."
+        },
+        {
+          "word": "cell",
+          "sentence": "A bee keeps honey in each cell."
+        },
+        {
+          "word": "city",
+          "sentence": "London is a big city."
+        },
+        {
+          "word": "fancy",
+          "sentence": "She wore a fancy dress to the party."
+        },
+        {
+          "word": "face",
+          "sentence": "Wash your face before bed."
+        },
+        {
+          "word": "space",
+          "sentence": "Rockets fly up into space."
+        },
+        {
+          "word": "bicycle",
+          "sentence": "I ride my bicycle to the park."
+        },
+        {
+          "word": "circle",
+          "sentence": "We sat in a circle on the carpet."
+        },
+        {
+          "word": "spicy",
+          "sentence": "The curry is too spicy for me."
+        }
+      ]
     },
     {
-      "word": "dodge",
-      "sentence": "Can you dodge the ball?"
+      "name": "Week 4",
+      "test": "2026-10-07",
+      "words": [
+        {
+          "word": "badge",
+          "sentence": "I got a shiny badge for swimming."
+        },
+        {
+          "word": "edge",
+          "sentence": "Don't stand too close to the edge."
+        },
+        {
+          "word": "bridge",
+          "sentence": "We walked over the bridge."
+        },
+        {
+          "word": "dodge",
+          "sentence": "Can you dodge the ball?"
+        },
+        {
+          "word": "fudge",
+          "sentence": "Grandma made some yummy fudge."
+        },
+        {
+          "word": "age",
+          "sentence": "What age are you?"
+        },
+        {
+          "word": "huge",
+          "sentence": "The elephant is huge."
+        },
+        {
+          "word": "change",
+          "sentence": "Let's change into our pyjamas."
+        },
+        {
+          "word": "charge",
+          "sentence": "The tablet needs to charge."
+        },
+        {
+          "word": "village",
+          "sentence": "We live in a little village."
+        }
+      ]
     },
     {
-      "word": "fudge",
-      "sentence": "Grandma made some yummy fudge."
+      "name": "Week 5",
+      "test": "2026-10-14",
+      "words": [
+        {
+          "word": "gem",
+          "sentence": "The crown has a red gem on it."
+        },
+        {
+          "word": "giant",
+          "sentence": "The giant lived at the top of the beanstalk."
+        },
+        {
+          "word": "magic",
+          "sentence": "The wizard did a magic trick."
+        },
+        {
+          "word": "giraffe",
+          "sentence": "The giraffe has a very long neck."
+        },
+        {
+          "word": "energy",
+          "sentence": "Breakfast gives me lots of energy."
+        },
+        {
+          "word": "jacket",
+          "sentence": "Put your jacket on, it's cold."
+        },
+        {
+          "word": "jar",
+          "sentence": "There is jam in the jar."
+        },
+        {
+          "word": "jog",
+          "sentence": "Dad likes to jog in the park."
+        },
+        {
+          "word": "join",
+          "sentence": "Can I join in your game?"
+        },
+        {
+          "word": "adjust",
+          "sentence": "Mum will adjust my helmet so it fits."
+        }
+      ]
     },
     {
-      "word": "age",
-      "sentence": "What age are you?"
-    },
-    {
-      "word": "huge",
-      "sentence": "The elephant is huge."
-    },
-    {
-      "word": "change",
-      "sentence": "Let's change into our pyjamas."
-    },
-    {
-      "word": "charge",
-      "sentence": "The tablet needs to charge."
-    },
-    {
-      "word": "village",
-      "sentence": "We live in a little village."
+      "name": "Week 6",
+      "test": "2026-10-21",
+      "words": [
+        {
+          "word": "door",
+          "sentence": "Please shut the door."
+        },
+        {
+          "word": "floor",
+          "sentence": "My socks are on the floor."
+        },
+        {
+          "word": "again",
+          "sentence": "Can we read that story again?"
+        },
+        {
+          "word": "wild",
+          "sentence": "Foxes are wild animals."
+        },
+        {
+          "word": "children",
+          "sentence": "The children played in the playground."
+        },
+        {
+          "word": "climb",
+          "sentence": "I can climb to the top of the slide."
+        },
+        {
+          "word": "parents",
+          "sentence": "My parents took me to the zoo."
+        },
+        {
+          "word": "most",
+          "sentence": "I like strawberries the most."
+        },
+        {
+          "word": "only",
+          "sentence": "There is only one biscuit left."
+        },
+        {
+          "word": "both",
+          "sentence": "I wash both of my hands."
+        }
+      ]
     }
   ]
 }

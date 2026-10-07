@@ -51,7 +51,7 @@ Leaderboards and gardeners live in each visitor's own browser (localStorage).
 | **🐢 Slow & Steady** | A per-gardener toggle for early typers: one word at a time floats in and waits in the middle of the sky, like in the Spelling Bee, instead of drifting across. The level still adapts. Its scores carry a 🐢 on the leaderboard. The three toggles are greyed out while the Spelling Bee is picked, since they don't apply to it. |
 | **Weak-key practice** | Per-key error tracking (with decay) biases letters and words toward the keys you miss and the keys you just unlocked. |
 | **Five games** | *Ten Flowers* (no clock), *Morning Stroll* (1 min), *Sunny Day* (2 min), *Long Summer* (5 min), *Forever Garden* (endless: pause and choose *All done!* to finish). The sun travels across the sky to sunset as the round goes on; in Forever Garden it drifts gently and never sets. |
-| **🐝 Spelling Bee** | This week's school spelling words, read aloud in British English: the word, a sentence that uses it, then the word again. The word is hidden as blank slots and each letter appears as it's typed. Press **Enter**, tap the sky or press 🔊 to hear it again. After 10 s without typing (or 3 wrong guesses at one letter) the next letter slowly fades in and the word is said again. Words that needed help come back once at the end, and the results list each word to practise. No clock, no music, and it never changes the typing level. It sits at the top of the game menu and is picked to start with. The words also join the other games' word lists. From level 12 (once whole words start drifting), this week's words turn up more often, whatever their length. |
+| **🐝 Spelling Bee** | This week's school spelling words (picked by test date, so it moves on to the next list by itself), read aloud in British English: the word, a sentence that uses it, then the word again. The word is hidden as blank slots and each letter appears as it's typed. Press **Enter**, tap the sky or press 🔊 to hear it again. After 10 s without typing (or 3 wrong guesses at one letter) the next letter slowly fades in and the word is said again. Words that needed help come back once at the end, and the results list each word to practise. No clock, no music, and it never changes the typing level. It sits at the top of the game menu and is picked to start with. The words also join the other games' word lists. From level 12 (once whole words start drifting), this week's words turn up more often, whatever their length. |
 | **Golden dandelions** | Now and then a glowing golden puff drifts by, worth double points and guaranteed to grow a rare flower. Bumble cheers on streaks. |
 | **Local leaderboard** | The "Garden of Fame": per game, by score or by speed, with medals, your own rows highlighted, and personal-best badges. Several gardeners can share one computer. |
 | **Collection** | 26 flower kinds in five rarities: *Common*, *Uncommon*, *Rare*, *Legendary* and two *Mythic* (the Rainbow Bloom and the Phoenix Bloom). There are real hedgerow flowers, real rarities such as the Jade Vine and the night-blooming Moonflower, flowers named after World of Warcraft herbs (Peacebloom, Heartblossom, Golden and Frost Lotus), and a few made up. Streaks raise the odds of rare blooms, and Mythic flowers only grow from a streak or a golden dandelion. Each gardener keeps a collection of the kinds they've discovered, shown by rarity in the wardrobe. |
@@ -62,21 +62,27 @@ Leaderboards and gardeners live in each visitor's own browser (localStorage).
 
 ## A new spelling list each week
 
-The Spelling Bee plays whatever list is in `spelling/words.txt`. To change it:
+`spelling/words.txt` holds the term's lists, each headed by its test date. The Spelling
+Bee plays the list for the next test, and moves on to the next week by itself at 3pm on
+test day (once the test is done). After the last test it keeps the last list until a new
+one is added. To add lists:
 
-1. **Edit `spelling/words.txt`.** Replace last week's lines with one word per line and,
-   optionally, a short sentence that uses it. The sentence is read out between two
-   sayings of the word, like a teacher in a spelling test. Capitals are fine (the game
-   uses lowercase), but words must be letters only, with no spaces or hyphens.
+1. **Edit `spelling/words.txt`.** Add a heading for each week with its test date
+   (`dd.mm.yy`), then one word per line and, optionally, a short sentence that uses it.
+   The sentence is read out between two sayings of the word, like a teacher in a spelling
+   test. Capitals are fine (the game uses lowercase), but words must be letters only,
+   with no spaces or hyphens. Past weeks can stay or be removed.
 
    ```
+   [Week 4: 07.10.26]
    badge | I got a shiny badge for swimming.
    edge | Don't stand too close to the edge.
    ```
 
-2. **Run `npm run spelling`.** Each word is spoken in British English by Microsoft's
-   `en-GB-SoniaNeural` neural voice. The old clips in `public/spelling/` are deleted,
-   two new ones are made per word (`word.mp3` and `word-say.mp3`), and
+2. **Run `npm run spelling`.** Each new word is spoken in British English by Microsoft's
+   `en-GB-SoniaNeural` neural voice: two clips per word in `public/spelling/` (`word.mp3`
+   and `word-say.mp3`). Words already spoken keep their clips unless their sentence
+   changed, clips for words no longer listed are deleted, and
    `src/engine/spelling.json` is rewritten. New words are also added to
    `src/engine/spelling-bank.json`, so they turn up in the other games too: every week's
    words stay there, and this week's come up more often. It takes about 2 seconds a word.
@@ -133,7 +139,8 @@ src/
   engine/content.ts    picks what each puff says (weak keys, new keys, Little Words)
   engine/words.ts      curated, kid-safe word, phrase and sentence lists
   engine/unlocks.ts    Bumble's Wardrobe: what unlocks when
-  engine/spelling.json this week's spelling list (generated by npm run spelling)
+  engine/spelling.json every week's spelling list (generated by npm run spelling)
+  engine/spelling.ts   picks this week's list from the test dates
   engine/spelling-bank.json every spelling word so far, mixed into the other games
   art/*.ts             procedural art: scenery, flowers, characters (Bumble, puffs), outfits, palette
   audio/sound.ts       synthesized sound effects and music

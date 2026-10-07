@@ -4,6 +4,7 @@ import { Round, MODES, getMode, type Mode, type ModeId, type RoundEvent, type Sp
 import { Bot } from './game/bot';
 import { sound } from './audio/sound';
 import { speech, SPELLING_WORDS } from './audio/speech';
+import { THIS_WEEK } from './engine/spelling';
 import { createKeyboard, FINGER_NAME, FINGER_OF } from './ui/keyboard';
 import { store, AVATARS, type Profile } from './storage/store';
 import { littleName } from './engine/content';
@@ -439,7 +440,7 @@ function showModes() {
   for (const m of games) {
     const best = store.leaderboard(m.id, 'score', 1000).find((s) => s.profileId === p.id);
     const spell = m.id === 'spelling';
-    const detail = spell ? `Listen to this week’s ${SPELLING_WORDS.length} words and spell them.` : m.detail;
+    const detail = spell ? `${THIS_WEEK?.name ?? 'This week'}: listen to the ${SPELLING_WORDS.length} words and spell them.` : m.detail;
     const text = [h('b', {}, m.name), h('small', {}, detail), best ? h('span', { class: 'best' }, `Best: ${best.score.toLocaleString()}`) : null];
     const b = h('button', { class: spell ? 'mode spell' : 'mode', type: 'button', 'data-id': m.id, onclick: () => { mode = m.id; paint(); sound.uiHover(); }, ondblclick: () => go() },
       h('span', { class: 'e' }, m.emoji), spell ? h('span', { class: 'txt' }, ...text) : text);
