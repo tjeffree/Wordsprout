@@ -99,8 +99,9 @@ test('growing flowers unlocks a hat for Bumble in the wardrobe', async ({ page }
   await crown.click();
   await expect(crown).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => [window.__game.store.current.hat, window.__game.renderer.outfit.hat])).toEqual(['flowercrown', 'flowercrown']);
-  // Locked treasures say how to get them.
-  await expect(page.locator('.item.locked', { hasText: 'Golden crown' })).toContainText('Grow 1000 flowers');
+  // Locked treasures say how to get them. (The party hat has no shortcut, so the
+  // round can't unlock it by luck, as a Mythic flower would the golden crown.)
+  await expect(page.locator('.item.locked', { hasText: 'Party hat' })).toContainText('Grow 60 flowers');
   await page.getByRole('tab', { name: /🌸 Flowers/ }).click();
   await expect(page.locator('.tier')).toHaveCount(5);
   // Back on the game menu, nothing is new any more.
