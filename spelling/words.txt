@@ -1,8 +1,47 @@
-# This week's spelling words, for the Spelling Bee game.
-# One per line:  word | a short sentence that uses it (the sentence is optional)
+# The school spelling lists, for the Spelling Bee game.
+# Each week starts with its test date:  [Week 5: 14.10.26]
+# then one word per line:  word | a short sentence that uses it (the sentence is optional)
+# The game plays the next test's words, and moves on to the next week at 3pm on test day.
 # Then run:  npm run spelling   (needs Python with edge-tts: pip install edge-tts)
 # Full steps: README.md, "A new spelling list each week".
 
+[Week 1: 16.09.26]
+knock | Knock on the door, please.
+know | I know all my colours.
+knee | I fell over and hurt my knee.
+knitting | Granny is knitting me a warm scarf.
+knife | Mum cuts the bread with a knife.
+gnat | A tiny gnat flew past my nose.
+gnaw | The dog likes to gnaw on a bone.
+gnash | The dragon in the story began to gnash its teeth.
+gnome | There is a little gnome in the garden.
+gnarled | The old tree has gnarled branches.
+
+[Week 2: 23.09.26]
+write | I can write my name.
+written | I have written a card for Dad.
+wrote | She wrote a letter to her friend.
+wrong | Oops, I took the wrong turn.
+wrap | Let's wrap the present in shiny paper.
+wrist | My watch goes on my wrist.
+wreck | We found an old ship wreck on the beach.
+wrestle | The puppies like to wrestle on the rug.
+wriggle | The worm can wriggle in the mud.
+wren | A little wren sang in the hedge.
+
+[Week 3: 30.09.26]
+race | Let's have a race to the gate.
+ice | The pond is covered in ice.
+cell | A bee keeps honey in each cell.
+city | London is a big city.
+fancy | She wore a fancy dress to the party.
+face | Wash your face before bed.
+space | Rockets fly up into space.
+bicycle | I ride my bicycle to the park.
+circle | We sat in a circle on the carpet.
+spicy | The curry is too spicy for me.
+
+[Week 4: 07.10.26]
 badge | I got a shiny badge for swimming.
 edge | Don't stand too close to the edge.
 bridge | We walked over the bridge.
@@ -13,3 +52,27 @@ huge | The elephant is huge.
 change | Let's change into our pyjamas.
 charge | The tablet needs to charge.
 village | We live in a little village.
+
+[Week 5: 14.10.26]
+gem | The crown has a red gem on it.
+giant | The giant lived at the top of the beanstalk.
+magic | The wizard did a magic trick.
+giraffe | The giraffe has a very long neck.
+energy | Breakfast gives me lots of energy.
+jacket | Put your jacket on, it's cold.
+jar | There is jam in the jar.
+jog | Dad likes to jog in the park.
+join | Can I join in your game?
+adjust | Mum will adjust my helmet so it fits.
+
+[Week 6: 21.10.26]
+door | Please shut the door.
+floor | My socks are on the floor.
+again | Can we read that story again?
+wild | Foxes are wild animals.
+children | The children played in the playground.
+climb | I can climb to the top of the slide.
+parents | My parents took me to the zoo.
+most | I like strawberries the most.
+only | There is only one biscuit left.
+both | I wash both of my hands.

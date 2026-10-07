@@ -3,7 +3,8 @@ import { ContentPicker, SHORT, MEDIUM, LONG } from '../../src/engine/content';
 import { LEVELS } from '../../src/engine/levels';
 import { rng } from '../../src/art/palette';
 import bank from '../../src/engine/spelling-bank.json';
-import week from '../../src/engine/spelling.json';
+import { WEEKS } from '../../src/engine/spelling';
+import { THIS_WEEK } from '../../src/engine/content';
 import {
   LETTER_STAGES,
   PICTURE_WORDS,
@@ -86,11 +87,12 @@ describe('spelling words in the other games', () => {
       const pool = w.length <= 4 ? SHORT : w.length <= 6 ? MEDIUM : LONG;
       expect(pool, w).toContain(w);
     }
-    for (const w of week.words) expect(bank.words, w.word).toContain(w.word);
+    for (const w of WEEKS.flatMap((x) => x.words)) expect(bank.words, w.word).toContain(w.word);
   });
 
   it("from level 12, this week's words (any length) come up", () => {
-    const words = week.words.map((w) => w.word);
+    const words = THIS_WEEK;
+    expect(words.length).toBeGreaterThan(0);
     for (const lv of [LEVELS[11], LEVELS[14]]) {
       const p = new ContentPicker(rng(4));
       const seen = new Set<string>();

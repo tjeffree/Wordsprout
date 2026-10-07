@@ -8,8 +8,9 @@ A child plays it: keep every word, sentence and message kind, simple and kid-saf
 Each week the user pastes their daughter's new school spelling list (usually Capitalised,
 one per line). To update the game:
 
-1. Replace the words in `spelling/words.txt` (keep the header comment). Use the format
-   `word | sentence`, lowercase. Write a short, simple sentence for each word that a
+1. Add the week(s) to `spelling/words.txt` (keep the header comment), each under a heading
+   with its test date, `[Week 7: 04.11.26]`. The game switches to the next week at 3pm
+   on test day by itself. Use the format `word | sentence`, lowercase. Write a short, simple sentence for each word that a
    6-year-old in the UK would understand, using British spelling and vocabulary (pyjamas, mum).
    Words must be letters only.
 2. `npm run spelling` (edge-tts, en-GB-SoniaNeural, needs internet; the user is happy with this voice).

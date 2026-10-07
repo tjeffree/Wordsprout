@@ -4,7 +4,7 @@
 import { CAPITAL_WORDS, LETTER_STAGES, LONG_WORDS, MEDIUM_WORDS, PHRASES, PICTURE_WORDS, SENTENCES, SHORT_WORDS } from './words';
 import type { ContentKind, Level } from './levels';
 import bank from './spelling-bank.json';
-import week from './spelling.json';
+import { THIS_WEEK as WEEK } from './spelling';
 
 export interface Item { text: string; emoji?: string; kind: ContentKind }
 
@@ -19,7 +19,7 @@ export const MEDIUM: string[] = withSpelling(MEDIUM_WORDS, 5, 6);
 export const LONG: string[] = withSpelling(LONG_WORDS, 7, Infinity);
 
 /** This week's spelling words turn up more often, so they get extra practice. */
-export const THIS_WEEK: string[] = week.words.map((w) => w.word);
+export const THIS_WEEK: string[] = WEEK?.words.map((w) => w.word) ?? [];
 const WEEK_CHANCE = 0.2;
 /** Levels 1-11 (letters, home row and picture words) stay as they are. */
 const WEEK_FROM_LEVEL = 12;

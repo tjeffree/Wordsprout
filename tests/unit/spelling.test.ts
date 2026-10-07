@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Round, getMode, HINT_AFTER, type Puff } from '../../src/game/round';
 import { DEFAULT_SKILL } from '../../src/engine/adaptive';
 import { rng } from '../../src/art/palette';
-import list from '../../src/engine/spelling.json';
+import { WEEKS, weekFor } from '../../src/engine/spelling';
 
 const CLIPS = Object.keys(import.meta.glob('../../public/spelling/*.mp3'));
 const WORDS = ['badge', 'edge', 'bridge'];
@@ -21,12 +21,28 @@ function nextWord(r: Round): Puff {
 function wait(r: Round, seconds: number) { for (let t = 0; t < seconds; t += 0.05) r.update(0.05); }
 
 describe('spelling bee', () => {
-  it('ships a word list with audio for every word', () => {
-    expect(list.words.length).toBeGreaterThan(0);
-    for (const w of list.words) {
-      expect(w.word).toMatch(/^[a-z]+$/);
-      for (const f of [w.word, `${w.word}-say`]) expect(CLIPS, f).toContain(`../../public/spelling/${f}.mp3`);
+  it("ships every week's list with audio for every word", () => {
+    expect(WEEKS.length).toBeGreaterThan(0);
+    for (const week of WEEKS) {
+      expect(week.test, week.name).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(week.words.length, week.name).toBeGreaterThan(0);
+      for (const w of week.words) {
+        expect(w.word).toMatch(/^[a-z]+$/);
+        for (const f of [w.word, `${w.word}-say`]) expect(CLIPS, f).toContain(`../../public/spelling/${f}.mp3`);
+      }
     }
+    const tests = WEEKS.map((w) => w.test);
+    expect(tests).toEqual([...tests].sort());
+  });
+
+  it('plays the next test’s words, moving on at 3pm on test day', () => {
+    const at = (test: string, hour: number) => { const [y, m, d] = test.split('-').map(Number); return new Date(y, m - 1, d, hour); };
+    expect(weekFor(at(WEEKS[0].test, 9))).toBe(WEEKS[0]);
+    WEEKS.forEach((w, i) => {
+      expect(weekFor(at(w.test, 14)), `${w.name} test morning`).toBe(w);
+      expect(weekFor(at(w.test, 16)), `${w.name} after the test`).toBe(WEEKS[i + 1] ?? w);
+    });
+    expect(weekFor(new Date(2100, 0, 1))).toBe(WEEKS.at(-1)); // the last list stays until a new one comes
   });
 
   it('asks each word once, one hidden word at a time, then ends', () => {

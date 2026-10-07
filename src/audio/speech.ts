@@ -6,10 +6,10 @@
 // silence through it from the tap that starts the round; after that it can read each
 // word out as it floats in.
 
-import list from '../engine/spelling.json';
+import { THIS_WEEK } from '../engine/spelling';
 
-/** This week's spelling words (lowercase). */
-export const SPELLING_WORDS: string[] = list.words.map((w) => w.word);
+/** This week's spelling words (lowercase): the list for the next test. */
+export const SPELLING_WORDS: string[] = THIS_WEEK?.words.map((w) => w.word) ?? [];
 
 const SILENCE = 'data:audio/wav;base64,UklGRqQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
 
