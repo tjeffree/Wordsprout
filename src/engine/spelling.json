@@ -276,6 +276,282 @@
           "sentence": "I wash both of my hands."
         }
       ]
+    },
+    {
+      "name": "Week 1",
+      "test": "2026-11-11",
+      "words": [
+        {
+          "word": "table",
+          "sentence": "We eat our tea at the table."
+        },
+        {
+          "word": "apple",
+          "sentence": "I have a crunchy red apple."
+        },
+        {
+          "word": "bottle",
+          "sentence": "My water bottle is in my bag."
+        },
+        {
+          "word": "little",
+          "sentence": "The kitten is very little."
+        },
+        {
+          "word": "middle",
+          "sentence": "I sit in the middle of the sofa."
+        },
+        {
+          "word": "able",
+          "sentence": "A bird is able to fly."
+        },
+        {
+          "word": "wobble",
+          "sentence": "My jelly can wobble on the plate."
+        },
+        {
+          "word": "multiple",
+          "sentence": "I have multiple teddies on my bed."
+        },
+        {
+          "word": "dazzle",
+          "sentence": "The fireworks dazzle us in the sky."
+        },
+        {
+          "word": "riddle",
+          "sentence": "Can you guess the answer to my riddle?"
+        }
+      ]
+    },
+    {
+      "name": "Week 2",
+      "test": "2026-11-18",
+      "words": [
+        {
+          "word": "camel",
+          "sentence": "A camel lives in the hot desert."
+        },
+        {
+          "word": "tunnel",
+          "sentence": "The train went into a dark tunnel."
+        },
+        {
+          "word": "squirrel",
+          "sentence": "A squirrel ran up the tree."
+        },
+        {
+          "word": "travel",
+          "sentence": "We travel to the seaside by car."
+        },
+        {
+          "word": "towel",
+          "sentence": "Dry your hands on the towel."
+        },
+        {
+          "word": "tinsel",
+          "sentence": "We put shiny tinsel on the tree."
+        },
+        {
+          "word": "bagel",
+          "sentence": "I had a bagel for breakfast."
+        },
+        {
+          "word": "hazel",
+          "sentence": "A hazel tree grows nuts."
+        },
+        {
+          "word": "vowel",
+          "sentence": "The letter a is a vowel."
+        },
+        {
+          "word": "jewel",
+          "sentence": "The queen has a sparkly jewel."
+        }
+      ]
+    },
+    {
+      "name": "Week 3",
+      "test": "2026-11-25",
+      "words": [
+        {
+          "word": "pencil",
+          "sentence": "I draw with my pencil."
+        },
+        {
+          "word": "fossil",
+          "sentence": "We found a fossil on the beach."
+        },
+        {
+          "word": "nostril",
+          "sentence": "I breathe in through my nostril."
+        },
+        {
+          "word": "pupil",
+          "sentence": "I am a pupil at my school."
+        },
+        {
+          "word": "metal",
+          "sentence": "The spoon is made of metal."
+        },
+        {
+          "word": "pedal",
+          "sentence": "Push the pedal to ride your bike."
+        },
+        {
+          "word": "capital",
+          "sentence": "London is the capital of England."
+        },
+        {
+          "word": "hospital",
+          "sentence": "Doctors work in a hospital."
+        },
+        {
+          "word": "animal",
+          "sentence": "My favourite animal is a cat."
+        },
+        {
+          "word": "oval",
+          "sentence": "An egg is an oval shape."
+        }
+      ]
+    },
+    {
+      "name": "Week 4",
+      "test": "2026-12-02",
+      "words": [
+        {
+          "word": "cry",
+          "sentence": "The baby started to cry."
+        },
+        {
+          "word": "fly",
+          "sentence": "Birds can fly high in the sky."
+        },
+        {
+          "word": "dry",
+          "sentence": "I hang my wet socks up to dry."
+        },
+        {
+          "word": "try",
+          "sentence": "I will try my very best."
+        },
+        {
+          "word": "reply",
+          "sentence": "Please reply to my letter."
+        },
+        {
+          "word": "sly",
+          "sentence": "The sly fox crept past the hens."
+        },
+        {
+          "word": "shy",
+          "sentence": "The shy puppy hid behind Mum."
+        },
+        {
+          "word": "terrify",
+          "sentence": "Spiders do not terrify me."
+        },
+        {
+          "word": "sky",
+          "sentence": "The sky is blue today."
+        },
+        {
+          "word": "multiply",
+          "sentence": "We can multiply two by three."
+        }
+      ]
+    },
+    {
+      "name": "Week 5",
+      "test": "2026-12-09",
+      "words": [
+        {
+          "word": "flies",
+          "sentence": "The bee flies to the flower."
+        },
+        {
+          "word": "tries",
+          "sentence": "My brother tries to catch the ball."
+        },
+        {
+          "word": "replies",
+          "sentence": "Granny always replies to my cards."
+        },
+        {
+          "word": "copies",
+          "sentence": "My little sister copies everything I do."
+        },
+        {
+          "word": "babies",
+          "sentence": "The ducks have three fluffy babies."
+        },
+        {
+          "word": "carries",
+          "sentence": "Dad carries me on his back."
+        },
+        {
+          "word": "cries",
+          "sentence": "The baby cries when she is hungry."
+        },
+        {
+          "word": "dries",
+          "sentence": "The sun dries the washing."
+        },
+        {
+          "word": "marries",
+          "sentence": "The princess marries the prince in the story."
+        },
+        {
+          "word": "families",
+          "sentence": "Lots of families came to the fair."
+        }
+      ]
+    },
+    {
+      "name": "Week 6",
+      "test": "2026-12-16",
+      "words": [
+        {
+          "word": "find",
+          "sentence": "Can you find my shoe?"
+        },
+        {
+          "word": "mind",
+          "sentence": "I do not mind sharing my toys."
+        },
+        {
+          "word": "behind",
+          "sentence": "The cat is hiding behind the chair."
+        },
+        {
+          "word": "old",
+          "sentence": "My teddy is very old."
+        },
+        {
+          "word": "cold",
+          "sentence": "It is cold in winter."
+        },
+        {
+          "word": "gold",
+          "sentence": "The pirate found a box of gold."
+        },
+        {
+          "word": "hold",
+          "sentence": "Hold my hand when we cross the road."
+        },
+        {
+          "word": "told",
+          "sentence": "Mum told me a bedtime story."
+        },
+        {
+          "word": "every",
+          "sentence": "I brush my teeth every day."
+        },
+        {
+          "word": "everybody",
+          "sentence": "Everybody likes a party."
+        }
+      ]
     }
   ]
 }

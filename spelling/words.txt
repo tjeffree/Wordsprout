@@ -76,3 +76,75 @@ parents | My parents took me to the zoo.
 most | I like strawberries the most.
 only | There is only one biscuit left.
 both | I wash both of my hands.
+
+[Week 1: 11.11.26]
+table | We eat our tea at the table.
+apple | I have a crunchy red apple.
+bottle | My water bottle is in my bag.
+little | The kitten is very little.
+middle | I sit in the middle of the sofa.
+able | A bird is able to fly.
+wobble | My jelly can wobble on the plate.
+multiple | I have multiple teddies on my bed.
+dazzle | The fireworks dazzle us in the sky.
+riddle | Can you guess the answer to my riddle?
+
+[Week 2: 18.11.26]
+camel | A camel lives in the hot desert.
+tunnel | The train went into a dark tunnel.
+squirrel | A squirrel ran up the tree.
+travel | We travel to the seaside by car.
+towel | Dry your hands on the towel.
+tinsel | We put shiny tinsel on the tree.
+bagel | I had a bagel for breakfast.
+hazel | A hazel tree grows nuts.
+vowel | The letter a is a vowel.
+jewel | The queen has a sparkly jewel.
+
+[Week 3: 25.11.26]
+pencil | I draw with my pencil.
+fossil | We found a fossil on the beach.
+nostril | I breathe in through my nostril.
+pupil | I am a pupil at my school.
+metal | The spoon is made of metal.
+pedal | Push the pedal to ride your bike.
+capital | London is the capital of England.
+hospital | Doctors work in a hospital.
+animal | My favourite animal is a cat.
+oval | An egg is an oval shape.
+
+[Week 4: 02.12.26]
+cry | The baby started to cry.
+fly | Birds can fly high in the sky.
+dry | I hang my wet socks up to dry.
+try | I will try my very best.
+reply | Please reply to my letter.
+sly | The sly fox crept past the hens.
+shy | The shy puppy hid behind Mum.
+terrify | Spiders do not terrify me.
+sky | The sky is blue today.
+multiply | We can multiply two by three.
+
+[Week 5: 09.12.26]
+flies | The bee flies to the flower.
+tries | My brother tries to catch the ball.
+replies | Granny always replies to my cards.
+copies | My little sister copies everything I do.
+babies | The ducks have three fluffy babies.
+carries | Dad carries me on his back.
+cries | The baby cries when she is hungry.
+dries | The sun dries the washing.
+marries | The princess marries the prince in the story.
+families | Lots of families came to the fair.
+
+[Week 6: 16.12.26]
+find | Can you find my shoe?
+mind | I do not mind sharing my toys.
+behind | The cat is hiding behind the chair.
+old | My teddy is very old.
+cold | It is cold in winter.
+gold | The pirate found a box of gold.
+hold | Hold my hand when we cross the road.
+told | Mum told me a bedtime story.
+every | I brush my teeth every day.
+everybody | Everybody likes a party.
