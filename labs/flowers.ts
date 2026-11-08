@@ -52,7 +52,7 @@ function frame(now: number) {
       const w = 40, hgt = 48, x0 = 10 + (i % 13) * 48, y0 = 10 + Math.floor(i / 13) * 56;
       ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, y0, w, hgt);
       drawFlower(ctx, { kind: k, x: x0 + w / 2, y: y0 + hgt - 4, size: hgt * 0.86, growth: 1, time: 0, seed: 3 });
-      ctx.save(); const zx = 10 + (i % 13) * 170, zy = 140 + Math.floor(i / 13) * 210; ctx.translate(zx, zy); ctx.scale(4, 4);
+      ctx.save(); const zx = 10 + (i % 13) * 170, zy = 20 + Math.ceil(KINDS.length / 13) * 56 + Math.floor(i / 13) * 210; ctx.translate(zx, zy); ctx.scale(4, 4);
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, hgt); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.25; ctx.strokeRect(0, 0, w, hgt);
       drawFlower(ctx, { kind: k, x: w / 2, y: hgt - 4, size: hgt * 0.86, growth: 1, time: 0, seed: 3 });
       ctx.restore();

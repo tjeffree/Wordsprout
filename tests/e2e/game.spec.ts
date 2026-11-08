@@ -108,6 +108,13 @@ test('growing flowers unlocks a hat for Bumble in the wardrobe', async ({ page }
   await page.keyboard.press('Escape');
   await expect(page.locator('.wardrobe-btn')).toBeVisible();
   await expect(page.locator('.wardrobe-btn .new-pill')).toHaveCount(0);
+  // The game went into the gardener's stats.
+  await page.getByRole('button', { name: /my stats/i }).click();
+  await expect(page.locator('.stat-tile', { hasText: 'game played' })).toContainText('1');
+  await expect(page.locator('.stat-tile', { hasText: 'words typed' })).toContainText('10');
+  await expect(page.locator('.stat-tile', { hasText: 'favourite game' })).toContainText('Ten Flowers');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.wardrobe-btn')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -365,6 +372,10 @@ test('no horizontal overflow on menus at 360px', async ({ page }) => {
   await newGardener(page, 'Tiny', 'bloom');
   await check();
   await page.evaluate(() => window.__game.showBoard('modes'));
+  await check();
+  await page.evaluate(() => window.__game.showStats());
+  await check();
+  await page.evaluate(() => window.__game.showWardrobe());
   await check();
 });
 

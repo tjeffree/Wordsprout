@@ -7,6 +7,7 @@ import type { FlowerKind } from '../art/flowers';
 import type { HatId, ExtraId } from '../art/outfits';
 import type { PuffStyle } from '../art/characters';
 import { MODES, type ModeId } from '../game/round';
+import { emptyStats, backfillStats, type Stats } from '../engine/stats';
 
 const KEY = 'wordsprout.v1';
 
@@ -41,6 +42,8 @@ export interface Profile {
   pbs?: number;
   bestStreak?: number;
   spelled?: number;
+  /** Everything they've done, for the stats page (only good things, only ever up). */
+  stats?: Stats;
 }
 
 export interface ScoreEntry {
@@ -97,7 +100,7 @@ function load(): Data {
 function fixProfile(p: Profile, scores: ScoreEntry[]): Profile {
   // Gardeners from before the wardrobe: their best streak so far is on the leaderboard.
   const bestStreak = p.bestStreak ?? Math.max(0, ...scores.filter((s) => s.profileId === p.id).map((s) => s.bestCombo ?? 0));
-  return { ...p, skill: { ...DEFAULT_SKILL, ...(p.skill ?? {}), keys: { ...(p.skill?.keys ?? {}) } }, discovered: p.discovered ?? [], bestStreak };
+  return { ...p, skill: { ...DEFAULT_SKILL, ...(p.skill ?? {}), keys: { ...(p.skill?.keys ?? {}) } }, discovered: p.discovered ?? [], bestStreak, stats: backfillStats(p) };
 }
 
 let data: Data = load();
@@ -130,7 +133,7 @@ export const store = {
       rounds: 0, bestWpm: 0, bestScore: 0, totalFlowers: 0, discovered: [],
       preferredMode: level <= 11 ? 'ten' : 'stroll',
       noCaps: level <= 11,
-      maxLevel: level, pbs: 0, bestStreak: 0, spelled: 0,
+      maxLevel: level, pbs: 0, bestStreak: 0, spelled: 0, stats: emptyStats(),
     };
     data.profiles.push(p);
     data.currentProfile = p.id;

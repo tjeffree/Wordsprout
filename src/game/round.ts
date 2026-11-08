@@ -97,6 +97,11 @@ export interface RoundStats {
   items: number;
   levelStart: number;
   levelPeak: number;
+  /** Things worth celebrating (they go into the gardener's stats). */
+  golden: number;     // golden dandelions caught
+  perfect: number;    // puffs typed with no slips
+  levelUps: number;
+  longest: string;    // the longest word typed
 }
 
 const SPAWN_FADE = 0.45;     // seconds a puff takes to "blow in"
@@ -141,6 +146,7 @@ export class Round {
     this.stats = {
       score: 0, correct: 0, wrong: 0, wpmChars: 0, activeMs: 0, combo: 0, bestCombo: 0,
       flowers: [], escapes: 0, items: 0, levelStart: this.skill.state.level, levelPeak: this.skill.state.level,
+      golden: 0, perfect: 0, levelUps: 0, longest: '',
     };
     this.setFocus(0);
   }
@@ -265,6 +271,9 @@ export class Round {
     p.flower = flower;
     this.stats.flowers.push(flower);
     this.stats.items++;
+    if (perfect) this.stats.perfect++;
+    if (p.golden) this.stats.golden++;
+    for (const w of p.text.split(/[^A-Za-z]+/)) if (w.length > this.stats.longest.length) this.stats.longest = w.toLowerCase();
 
     const start = Math.max(p.availableAt, this.lastDoneAt);
     const ms = Math.max(150, (this.time - start) * 1000);
@@ -292,6 +301,7 @@ export class Round {
   private recordItem(r: ItemResult): void {
     const d = this.skill.record(r);
     if (d !== 0) {
+      if (d > 0) this.stats.levelUps++;
       this.stats.levelPeak = Math.max(this.stats.levelPeak, this.skill.state.level);
       this.setFocus(d);
       this.emit({ type: 'level', level: this.level, dir: d, newKeys: this.focusKeys });
