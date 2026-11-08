@@ -20,12 +20,13 @@ function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: () => number } {
   return { ctx, calls: () => n };
 }
 
+let offscreenMade = 0;
 beforeAll(() => {
   // drawPuff caches heads on an OffscreenCanvas; node has none, so stub one.
   (globalThis as Record<string, unknown>).OffscreenCanvas = class {
     width: number;
     height: number;
-    constructor(w: number, h: number) { this.width = w; this.height = h; }
+    constructor(w: number, h: number) { this.width = w; this.height = h; offscreenMade++; }
     getContext() { return fakeCtx().ctx; }
   };
 });
@@ -34,8 +35,14 @@ const MOODS: BeeMood[] = ['idle', 'happy', 'cheer', 'oops', 'sleepy'];
 
 describe('Bumble outfits', () => {
   it('lists the hats and extras in order', () => {
-    expect(HATS).toEqual(['none', 'flowercrown', 'party', 'sunhat', 'graduation', 'tophat', 'wizard', 'crown']);
-    expect(EXTRAS).toEqual(['none', 'bowtie', 'heartglasses', 'scarf', 'specs', 'cape', 'lei']);
+    expect(HATS).toEqual([
+      'none', 'flowercrown', 'party', 'sunhat', 'graduation', 'tophat', 'wizard', 'crown',
+      'bobble', 'cracker', 'elf', 'antlers', 'toadstool', 'pirate', 'astronaut',
+    ]);
+    expect(EXTRAS).toEqual([
+      'none', 'bowtie', 'heartglasses', 'scarf', 'specs', 'cape', 'lei',
+      'bells', 'moustache', 'goggles', 'medal', 'backpack', 'wand',
+    ]);
   });
 
   it('draws every hat and extra in every mood and facing', () => {
@@ -56,12 +63,25 @@ describe('Bumble outfits', () => {
 
 describe('puff styles', () => {
   it('lists the styles in order', () => {
-    expect(PUFF_STYLES).toEqual(['dandelion', 'sparkle', 'bubble', 'balloon', 'cloud', 'rainbow']);
+    expect(PUFF_STYLES).toEqual([
+      'dandelion', 'sparkle', 'bubble', 'balloon', 'cloud', 'rainbow',
+      'snowflake', 'bauble', 'present', 'star', 'slime', 'ghost',
+    ]);
+  });
+
+  it('gives every style its own cached head', () => {
+    // A style that fell through to another style's drawing would make no new head sprites.
+    // (The sparkly puff is the dandelion's head with sparkles round it, so it shares the sprite.)
+    for (const style of PUFF_STYLES) if (style !== 'sparkle') {
+      const before = offscreenMade;
+      drawPuff(fakeCtx().ctx, { x: 0, y: 0, radius: 300, time: 1, seed: 2, style });
+      expect(offscreenMade, style).toBeGreaterThan(before);
+    }
   });
 
   it('draws every style with target, shake and urgency', () => {
     for (const style of PUFF_STYLES) for (const radius of [14, 30, 54, 90]) {
-      for (const target of [0, 1]) for (const shake of [0, 0.7]) for (const urgency of [0, 0.5, 1]) for (const seed of [0, 3.7, 41]) {
+      for (const target of [0, 1]) for (const shake of [0, 0.7]) for (const urgency of [0, 0.5, 1]) for (const seed of [0, 3.7, 41, -5]) {
         const f = fakeCtx();
         expect(() => drawPuff(f.ctx, { x: 100, y: 100, radius, time: seed + 2.1, seed, target, shake, urgency, style })).not.toThrow();
         expect(f.calls()).toBeGreaterThan(0);

@@ -1,9 +1,11 @@
 // Bumble's Wardrobe: hats, extras and puff styles that unlock as a gardener plays.
 // Every item unlocks by growing enough flowers, so simply playing (any game, the
 // Spelling Bee included) always gets there. Many can also unlock sooner through
-// another goal: a level, personal bests, a streak, spelling words or rare flowers.
+// another goal: a level, personal bests, a streak, spelling words, rare flowers or
+// something from the gardener's stats (Spelling Bees finished, golden dandelions...).
 
-import { FLOWER_RARITY, type FlowerKind } from '../art/flowers';
+import { FLOWER_RARITY, FLOWER_KINDS, type FlowerKind } from '../art/flowers';
+import type { Stats } from './stats';
 import type { HatId, ExtraId } from '../art/outfits';
 import type { PuffStyle } from '../art/characters';
 
@@ -19,6 +21,14 @@ export interface Progress {
   kinds: number;
   legendary: number;
   mythic: number;
+  /** From the gardener's stats (engine/stats.ts). */
+  bees: number;
+  firstTime: number;
+  golden: number;
+  perfect: number;
+  letters: number;
+  days: number;
+  bestRun: number;
 }
 
 export interface Goal { stat: Exclude<keyof Progress, 'flowers'>; n: number }
@@ -62,7 +72,34 @@ export const ITEMS: readonly Item[] = [
   puff('balloon', 'Balloon', '🎈', 160, { stat: 'pbs', n: 2 }),
   puff('cloud', 'Little cloud', '☁️', 350, { stat: 'bestStreak', n: 20 }),
   puff('rainbow', 'Rainbow puff', '🌈', 700, { stat: 'legendary', n: 1 }),
+
+  // The winter term's treasures, for gardeners who have everything above.
+  // Their other goals lean on the Spelling Bee and the stats, which start counting afresh.
+  hat('bobble', 'Bobble hat', '❄️', 1100, { stat: 'bees', n: 3 }),
+  hat('cracker', 'Cracker crown', '🎊', 1250, { stat: 'firstTime', n: 25 }),
+  hat('elf', 'Elf hat', '🧝', 1400, { stat: 'days', n: 10 }),
+  hat('antlers', 'Reindeer antlers', '🦌', 1600, { stat: 'golden', n: 10 }),
+  hat('toadstool', 'Toadstool cap', '🍄', 1900, { stat: 'kinds', n: 30 }),
+  hat('pirate', 'Pirate hat', '🦜', 2200, { stat: 'firstTime', n: 100 }),
+  hat('astronaut', 'Space helmet', '🚀', 2600, { stat: 'mythic', n: tierCount(4) }),
+
+  extra('bells', 'Jingle bells', '🔔', 1150, { stat: 'firstTime', n: 10 }),
+  extra('moustache', 'Twirly moustache', '🥸', 1300, { stat: 'perfect', n: 300 }),
+  extra('goggles', 'Pilot goggles', '🥽', 1500, { stat: 'bestRun', n: 5 }),
+  extra('medal', 'Gold medal', '🏅', 1750, { stat: 'firstTime', n: 50 }),
+  extra('backpack', 'Adventure backpack', '🎒', 2000, { stat: 'letters', n: 10000 }),
+  extra('wand', 'Magic wand', '🪄', 2400, { stat: 'kinds', n: FLOWER_KINDS.length }),
+
+  puff('snowflake', 'Snowflake', '❄️', 1050, { stat: 'bees', n: 1 }),
+  puff('bauble', 'Christmas bauble', '🎄', 1200, { stat: 'firstTime', n: 20 }),
+  puff('present', 'Gift box', '🎁', 1350, { stat: 'days', n: 7 }),
+  puff('star', 'Wishing star', '⭐', 1700, { stat: 'golden', n: 15 }),
+  puff('slime', 'Jelly slime', '🟢', 2000, { stat: 'perfect', n: 500 }),
+  puff('ghost', 'Friendly ghost', '👻', 2300, { stat: 'legendary', n: tierCount(3) }),
 ];
+
+/** How many kinds of flower a rarity tier has. */
+function tierCount(tier: number): number { return FLOWER_KINDS.filter((k) => FLOWER_RARITY[k] === tier).length; }
 
 export const DEFAULT_OUTFIT = { hat: 'none' as HatId, extra: 'none' as ExtraId, puff: 'dandelion' as PuffStyle };
 
@@ -79,6 +116,7 @@ export interface ProgressSource {
   pbs?: number;
   bestStreak?: number;
   spelled?: number;
+  stats?: Partial<Stats>;
 }
 
 export function progressOf(p: ProgressSource): Progress {
@@ -92,6 +130,13 @@ export function progressOf(p: ProgressSource): Progress {
     kinds: p.discovered.length,
     legendary: tiers.filter((t) => t >= 3).length,
     mythic: tiers.filter((t) => t >= 4).length,
+    bees: p.stats?.bees ?? 0,
+    firstTime: p.stats?.firstTime ?? 0,
+    golden: p.stats?.golden ?? 0,
+    perfect: p.stats?.perfect ?? 0,
+    letters: p.stats?.letters ?? 0,
+    days: p.stats?.days ?? 0,
+    bestRun: p.stats?.bestRun ?? 0,
   };
 }
 
@@ -112,9 +157,16 @@ export function goalText(g: Goal): string {
     case 'pbs': return g.n === 1 ? 'get a personal best' : `get ${g.n} personal bests`;
     case 'bestStreak': return `type ${g.n} words in a row`;
     case 'spelled': return `spell ${g.n} words in the Spelling Bee`;
-    case 'kinds': return `discover ${g.n} kinds of flower`;
-    case 'legendary': return 'find a Legendary flower';
-    case 'mythic': return 'find a Mythic flower';
+    case 'kinds': return g.n >= FLOWER_KINDS.length ? 'discover every kind of flower' : `discover ${g.n} kinds of flower`;
+    case 'legendary': return g.n === 1 ? 'find a Legendary flower' : g.n >= tierCount(3) ? 'find every Legendary flower' : `find ${g.n} kinds of Legendary flower`;
+    case 'mythic': return g.n === 1 ? 'find a Mythic flower' : g.n >= tierCount(4) ? 'find every Mythic flower' : `find ${g.n} kinds of Mythic flower`;
+    case 'bees': return g.n === 1 ? 'finish a Spelling Bee' : `finish ${g.n} Spelling Bees`;
+    case 'firstTime': return `spell ${g.n} words right first time`;
+    case 'golden': return g.n === 1 ? 'catch a golden dandelion' : `catch ${g.n} golden dandelions`;
+    case 'perfect': return `type ${g.n} words with no slips`;
+    case 'letters': return `type ${g.n.toLocaleString('en-GB')} letters`;
+    case 'days': return `play on ${g.n} different days`;
+    case 'bestRun': return `play ${g.n} days in a row`;
   }
 }
 

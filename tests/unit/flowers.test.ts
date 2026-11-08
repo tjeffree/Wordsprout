@@ -7,9 +7,9 @@ import {
 const ALL = Object.keys(FLOWER_RARITY) as FlowerKind[];
 
 describe('flower collection', () => {
-  it('has all 26 kinds, matching the rarity table, each with a name', () => {
-    expect(FLOWER_KINDS.length).toBe(26);
-    expect(new Set(FLOWER_KINDS).size).toBe(26);
+  it('has all 37 kinds, matching the rarity table, each with a name', () => {
+    expect(FLOWER_KINDS.length).toBe(37);
+    expect(new Set(FLOWER_KINDS).size).toBe(37);
     expect([...FLOWER_KINDS].sort()).toEqual([...ALL].sort());
     for (const k of FLOWER_KINDS) {
       expect(typeof FLOWER_NAMES[k]).toBe('string');
@@ -18,21 +18,33 @@ describe('flower collection', () => {
     expect(Object.keys(FLOWER_NAMES).sort()).toEqual([...ALL].sort());
   });
 
-  it('is listed in tier order, every tier has a kind, and exactly two are mythic', () => {
+  it('is listed in tier order, every tier has a kind, and exactly three are mythic', () => {
     expect(TIER_NAMES.length).toBe(5);
     for (let i = 1; i < FLOWER_KINDS.length; i++) {
       expect(FLOWER_RARITY[FLOWER_KINDS[i]]).toBeGreaterThanOrEqual(FLOWER_RARITY[FLOWER_KINDS[i - 1]]);
     }
     for (let t = 0; t < TIER_NAMES.length; t++) expect(ALL.filter((k) => FLOWER_RARITY[k] === t).length).toBeGreaterThan(0);
-    expect(ALL.filter((k) => FLOWER_RARITY[k] === 4).sort()).toEqual(['phoenixbloom', 'rainbowbloom']);
+    expect(ALL.filter((k) => FLOWER_RARITY[k] === 4).sort()).toEqual(['aurorabloom', 'phoenixbloom', 'rainbowbloom']);
+  });
+
+  it('puts the new winter kinds at the end of their tiers', () => {
+    const tier = (t: number) => FLOWER_KINDS.filter((k) => FLOWER_RARITY[k] === t);
+    expect(tier(0).slice(-2)).toEqual(['crocus', 'sweetpea']);
+    expect(tier(1).slice(-3)).toEqual(['bluejazz', 'cosmos', 'allium']);
+    expect(tier(2).slice(-3)).toEqual(['summerspangle', 'lilyofthevalley', 'poinsettia']);
+    expect(tier(3).slice(-2)).toEqual(['fairyrose', 'torchflower']);
+    expect(tier(4).slice(-1)).toEqual(['aurorabloom']);
+    expect(FLOWER_NAMES.lilyofthevalley).toBe('Lily of the Valley');
+    expect(FLOWER_NAMES.summerspangle).toBe('Summer Spangle');
   });
 
   it('knows which kinds animate and how big each one is', () => {
     expect(ALL.filter(flowerAnimated).sort()).toEqual(
-      ['frostlotus', 'goldenlotus', 'moonflower', 'phoenixbloom', 'rainbowbloom', 'starbloom'],
+      ['aurorabloom', 'fairyrose', 'frostlotus', 'goldenlotus', 'moonflower', 'phoenixbloom', 'rainbowbloom', 'starbloom', 'torchflower'],
     );
     expect(flowerSizeScale('sprout')).toBe(0.55);
     expect(flowerSizeScale('sunflower')).toBe(1.18);
+    for (const k of ['rainbowbloom', 'phoenixbloom', 'aurorabloom'] as const) expect(flowerSizeScale(k)).toBe(1.18);
     for (const k of ALL) expect(flowerSizeScale(k)).toBeGreaterThan(0);
   });
 });

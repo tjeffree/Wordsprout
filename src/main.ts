@@ -14,6 +14,7 @@ import { drawFlower, FLOWER_KINDS, FLOWER_NAMES, FLOWER_RARITY, TIER_NAMES, type
 import { drawBee, drawPuff, type PuffStyle } from './art/characters';
 import type { HatId, ExtraId } from './art/outfits';
 import { ITEMS, itemsFor, progressOf, isUnlocked, unlockedIds, howToUnlock, nextUnlock, key, type Item, type Slot } from './engine/unlocks';
+import { addRound, backfillStats, firstTimeWords, playTime } from './engine/stats';
 import { h, icon, fmtTime, timeAgo } from './ui/dom';
 
 // ------------------------------------------------------------------ setup --
@@ -28,7 +29,7 @@ const renderer = new Renderer(canvas);
 const keyboard = createKeyboard(kbLayer);
 keyboard.setVisible(false);
 
-type Screen = 'title' | 'profiles' | 'new' | 'modes' | 'play' | 'results' | 'board' | 'settings' | 'wardrobe';
+type Screen = 'title' | 'profiles' | 'new' | 'modes' | 'play' | 'results' | 'board' | 'settings' | 'wardrobe' | 'stats';
 let screen: Screen = 'title';
 let round: Round | null = null;
 let attract: { round: Round; bot: Bot } | null = null;
@@ -463,6 +464,7 @@ function showModes() {
     h('div', { class: 'who' },
       h('span', { class: 'av' }, p.avatar),
       h('div', { class: 'meta' }, h('b', {}, p.name), h('span', {}, `Level ${lv.id} · ${lv.name}${p.bestWpm ? ` · best ${Math.round(p.bestWpm)} WPM` : ''}`)),
+      h('button', { class: 'chip-toggle stats-btn', type: 'button', onclick: () => { sound.uiClick(); showStats(); } }, '📊 My stats'),
     ),
     wardrobe,
     modes,
@@ -692,6 +694,69 @@ function flowerCollection(p: Profile): HTMLElement {
       }))));
   });
   return wrap;
+}
+
+// ----------------------------------------------------------------- stats --
+/** Everything the gardener has done, all good news: no mistakes, nothing that goes down. */
+function showStats() {
+  startAttract();
+  const p = store.current;
+  if (!p) return showProfiles();
+  const st = backfillStats(p);
+  const pr = progressOf(p);
+  const n = (v: number) => v.toLocaleString('en-GB');
+  type Tile = [emoji: string, value: string, label: string] | null;
+  const fav = MODES.filter((m) => (st.modes[m.id] ?? 0) > 0).sort((a, b) => (st.modes[b.id] ?? 0) - (st.modes[a.id] ?? 0))[0];
+  const treasures = ITEMS.filter((i) => i.flowers > 0);
+  const sections: [string, Tile[]][] = [
+    ['🌱 Playing', [
+      ['🎈', n(st.games), st.games === 1 ? 'game played' : 'games played'],
+      ['📅', n(st.days), st.days === 1 ? 'day in the garden' : 'days in the garden'],
+      st.bestRun >= 2 ? ['🔥', n(st.bestRun), 'days in a row'] : null,
+      st.seconds > 0 ? ['⏰', playTime(st.seconds), 'in the garden'] : null,
+      fav ? [fav.emoji, fav.name, `favourite game (${n(st.modes[fav.id] ?? 0)} times)`] : null,
+    ]],
+    ['⌨️ Typing', [
+      ['🌼', n(st.words), 'words typed'],
+      st.letters ? ['🔤', n(st.letters), 'letters typed'] : null,
+      st.perfect ? ['💯', n(st.perfect), 'words with no slips'] : null,
+      st.longest.length >= 4 ? ['📏', st.longest, `longest word (${st.longest.length} letters)`] : null,
+      p.bestStreak ? ['🔗', n(p.bestStreak), 'words in a row'] : null,
+      p.bestWpm ? ['🚀', String(Math.round(p.bestWpm)), 'words a minute (fastest)'] : null,
+      ['🪜', String(pr.maxLevel), 'highest level'],
+      st.levelUps ? ['⬆️', n(st.levelUps), st.levelUps === 1 ? 'level up' : 'level ups'] : null,
+    ]],
+    ['🐝 Spelling Bee', [
+      ['🐝', n(p.spelled ?? 0), 'words spelled'],
+      ['⭐', n(st.firstTime), 'right first time'],
+      ['🏁', n(st.bees), st.bees === 1 ? 'Spelling Bee finished' : 'Spelling Bees finished'],
+    ]],
+    ['🌸 Garden', [
+      ['🌸', n(p.totalFlowers), 'flowers grown'],
+      ['🔍', `${p.discovered.length} of ${FLOWER_KINDS.length}`, 'kinds of flower found'],
+      st.rare ? ['💎', n(st.rare), 'rare flowers grown'] : null,
+      st.golden ? ['✨', n(st.golden), st.golden === 1 ? 'golden dandelion' : 'golden dandelions'] : null,
+      p.pbs ? ['🏆', n(p.pbs), p.pbs === 1 ? 'personal best' : 'personal bests'] : null,
+      ['🎁', `${treasures.filter((i) => isUnlocked(i, pr)).length} of ${treasures.length}`, 'treasures for Bumble'],
+    ]],
+  ];
+  // Older gardeners: games, words and flowers go back to the start, the newer counts don't.
+  const since = st.since > p.createdAt + 86400000
+    ? h('p', { class: 'keytip' }, `Bumble started counting some of these on ${new Date(st.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`)
+    : null;
+  const back = () => showModes();
+  const el = h('div', { class: 'screen' }, h('div', { class: 'card pop-in stats-card', style: 'max-width:820px' },
+    h('div', { class: 'back' }, iconBtn('back', 'Back', back)),
+    h('h2', {}, `${p.avatar} ${p.name}’s garden diary`),
+    h('p', { class: 'sub' }, 'Everything you’ve done so far. Look how much you’ve grown!'),
+    h('div', { class: 'stat-sections rise-in' }, ...sections.map(([title, tiles]) => h('section', { class: 'stat-section' },
+      h('h3', {}, title),
+      h('div', { class: 'stat-tiles' }, ...tiles.filter((t): t is NonNullable<Tile> => !!t).map(([e, v, label]) =>
+        h('div', { class: 'stat-tile' }, h('span', { class: 'e', 'aria-hidden': 'true' }, e), h('b', { class: v.length > 10 ? 'long' : '' }, v), h('small', {}, label))))))),
+    since,
+    h('div', { class: 'row' }, btn('Back to the games', 'big', back, { 'data-autofocus': true })),
+  ));
+  show(el, 'stats', (e) => { if (e.key === 'Escape') back(); });
 }
 
 // ------------------------------------------------------------------ play --
@@ -936,6 +1001,13 @@ function finishRound() {
   p.pbs = (p.pbs ?? 0) + (pbScore && !firstInMode ? 1 : 0) + (pbWpm && p.rounds > 1 ? 1 : 0);
   p.bestStreak = Math.max(p.bestStreak ?? 0, s.bestCombo);
   p.spelled = (p.spelled ?? 0) + (r.spelling?.results.length ?? 0);
+  // The stats page: only good things, and a little party when a big number is reached.
+  const { stats, milestones } = addRound(backfillStats(p), {
+    mode: r.mode.id, words: s.items, letters: s.correct, perfect: s.perfect, golden: s.golden, flowers: s.flowers,
+    levelUps: s.levelUps, seconds: r.time, longest: s.longest,
+    spelling: r.spelling ? { results: r.spelling.results, finished: !r.spelling.queue.length } : undefined,
+  });
+  p.stats = stats;
   const progress = progressOf(p);
   const unlocked = ITEMS.filter((i) => !hadBefore.has(key(i)) && isUnlocked(i, progress));
   const next = nextUnlock(progress);
@@ -956,6 +1028,7 @@ function finishRound() {
     newKinds.length > 1 ? h('span', { class: 'badge butter', title: newKinds.map((k) => FLOWER_NAMES[k]).join(', ') }, ...newKinds.slice(0, 8).map((k) => flowerThumb(k, 22, 28)), `${newKinds.length} new flowers!`) : null,
     unlocked.length === 1 ? h('span', { class: 'badge lilac' }, itemThumb(unlocked[0], 30, 28), `New for Bumble: ${unlocked[0].name}!`) : null,
     unlocked.length > 1 ? h('span', { class: 'badge lilac', title: unlocked.map((i) => i.name).join(', ') }, ...unlocked.slice(0, 5).map((i) => itemThumb(i, 30, 28)), `${unlocked.length} new treasures for Bumble!`) : null,
+    ...milestones.slice(0, 2).map((m) => h('span', { class: 'badge mint milestone' }, `${m.emoji} ${m.text}`)),
   );
   // What's next: a little goal to keep growing towards.
   const nextLine = !unlocked.length && next ? h('p', { class: 'next-unlock' }, itemThumb(next.item, 30, 28), `${next.more} more flower${next.more === 1 ? '' : 's'} until the ${next.item.name} 🎁`) : null;
@@ -1007,7 +1080,8 @@ function finishRound() {
 /** Spelling Bee results: each word, starred if it was spelled first time with no help. */
 function spellingReport(results: SpellingResult[]): HTMLElement {
   const words = [...new Set(results.map((x) => x.word))];
-  const easy = (w: string) => results.some((x) => x.word === w && !x.retry && !x.hinted && x.wrong === 0);
+  const first = new Set(firstTimeWords(results));
+  const easy = (w: string) => first.has(w);
   const practise = words.filter((w) => !easy(w));
   return h('div', { class: 'spelling-report rise-in' },
     h('div', { class: 'spell-words' }, ...words.map((w) => h('span', { class: `spell-word${easy(w) ? ' easy' : ''}`, title: easy(w) ? 'Spelled first time!' : 'Worth another practice' }, easy(w) ? '⭐ ' : '🌱 ', w))),
@@ -1107,5 +1181,6 @@ showTitle();
   showModes,
   showBoard,
   showWardrobe,
+  showStats,
   showResults: finishRound,
 };

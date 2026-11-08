@@ -247,7 +247,7 @@ export function drawBee(ctx: CanvasRenderingContext2D, o: BeeOpts): void {
   drawBeeFace(ctx, mood, blink, lw, t);
 
   // ---- outfit pieces in front (glasses, bow tie, lei, scarf), then the hat last
-  if (extra !== 'none') drawExtraFront(ctx, extra, t, lw);
+  if (extra !== 'none') drawExtraFront(ctx, extra, t, lw, mood);
   if (hat !== 'none') drawHat(ctx, hat, t, lw);
 
   ctx.restore();
@@ -438,8 +438,13 @@ function drawBeeFace(ctx: CanvasRenderingContext2D, mood: BeeMood, blink: number
 /* Dandelion puff                                                      */
 /* ------------------------------------------------------------------ */
 
-export type PuffStyle = 'dandelion' | 'sparkle' | 'bubble' | 'balloon' | 'cloud' | 'rainbow';
-export const PUFF_STYLES: readonly PuffStyle[] = ['dandelion', 'sparkle', 'bubble', 'balloon', 'cloud', 'rainbow'];
+export type PuffStyle =
+  | 'dandelion' | 'sparkle' | 'bubble' | 'balloon' | 'cloud' | 'rainbow'
+  | 'snowflake' | 'bauble' | 'star' | 'slime' | 'ghost' | 'present';
+export const PUFF_STYLES: readonly PuffStyle[] = [
+  'dandelion', 'sparkle', 'bubble', 'balloon', 'cloud', 'rainbow',
+  'snowflake', 'bauble', 'present', 'star', 'slime', 'ghost',
+];
 
 export interface PuffOpts {
   x: number;
@@ -462,6 +467,42 @@ const CLOUD_COLS = ['#ffffff', '#f4f9ff', '#dcebff', '#cfe6ff', '#fff8ec'] as co
 /** Soft pastel rainbow, red to violet. */
 const RAINBOW = ['#ff8a8a', '#ffb36b', '#ffe066', '#8fe08a', '#7cc8ff', '#a99cff', '#e59cf0'] as const;
 const RAINBOW_SOFT = RAINBOW.map((c) => mixHex(c, '#ffffff', 0.3));
+/** [fill, outline] colour pairs. */
+type Duo = readonly [string, string];
+const SNOW_EDGE = '#6f9ad4';
+/** Above this urgency, the faces look a little worried. */
+const WORRIED = 0.5;
+const SNOW_COLS = ['#ffffff', '#9fd0ff', '#d9ecff', '#6f9ad4', '#bfe0ff'] as const;
+/** Outline of the snow dots drifting off an urgent snowflake. */
+const SNOW_DOT_EDGE = '#5a86c4';
+const BAUBLE_COLS: readonly Duo[] = [
+  ['#ff6b6b', '#c4434f'], ['#5fcf8a', '#2f9a5c'], ['#6fb6ff', '#3d7fc4'], ['#b48cff', '#7d58c9'],
+  ['#ff8fc0', '#cf5f92'], ['#ffcf4a', '#c9971f'], ['#4fd1c5', '#2a9a90'],
+];
+const BAUBLE_BURST = [...BAUBLE_COLS.map((c) => c[0]), '#ffe9a0', '#ffffff'];
+const STAR_COLS = ['#ffd84a', '#fff1a8', '#ffb84a', '#ffffff', '#ffe066'] as const;
+const SLIME_COLS: readonly Duo[] = [
+  ['#7ee0a8', '#3fa46e'], ['#8fd0ff', '#4f93c9'], ['#ff9ec7', '#cf5f92'], ['#b99cff', '#7d62c9'], ['#ffd45c', '#e0a92a'],
+];
+const SLIME_BURST = [...SLIME_COLS.map((c) => c[0]), '#ffffff'];
+const GHOST_EDGE = '#a99cd6';
+const GHOST_COLS = ['#ffffff', '#ece6ff', '#ffd6ec', '#d7ecff', '#f6f2ff'] as const;
+type Wrap = { paper: Duo; ribbon: Duo; dots: boolean };
+const PRESENT_WRAPS: readonly Wrap[] = [
+  { paper: ['#ff7a7a', '#c4525a'], ribbon: ['#ffd45c', '#c99a22'], dots: true },
+  { paper: ['#7ee0c3', '#3fa487'], ribbon: ['#ff9ec7', '#cf5f92'], dots: false },
+  { paper: ['#8fd0ff', '#4f93c9'], ribbon: ['#ff7a7a', '#c4525a'], dots: true },
+  { paper: ['#b99cff', '#7d62c9'], ribbon: ['#ffd45c', '#c99a22'], dots: false },
+  { paper: ['#ffd45c', '#c99a22'], ribbon: ['#ff7a7a', '#c4525a'], dots: true },
+  { paper: ['#6dcf7a', '#3f9a4f'], ribbon: ['#ff6b6b', '#c4434f'], dots: false },
+  { paper: ['#ff9ec7', '#cf5f92'], ribbon: ['#8fd0ff', '#4f93c9'], dots: true },
+];
+const PRESENT_BURST = ['#ff7a7a', '#ffd45c', '#7ee0c3', '#ff9ec7', '#8fd0ff', '#b99cff', '#ffffff'];
+
+/** A seed's pick out of n variants (always 0..n-1). */
+function pick(seed: number, n: number): number {
+  return (((seed | 0) % n) + n) % n;
+}
 
 /** Sparkle colours for when a puff of this style pops (null = the usual petal colours). */
 export function puffBurstColors(style: PuffStyle): readonly string[] | null {
@@ -471,6 +512,12 @@ export function puffBurstColors(style: PuffStyle): readonly string[] | null {
     case 'balloon': return BALLOON_BURST;
     case 'cloud': return CLOUD_COLS;
     case 'rainbow': return RAINBOW;
+    case 'snowflake': return SNOW_COLS;
+    case 'bauble': return BAUBLE_BURST;
+    case 'star': return STAR_COLS;
+    case 'slime': return SLIME_BURST;
+    case 'ghost': return GHOST_COLS;
+    case 'present': return PRESENT_BURST;
     default: return null;
   }
 }
@@ -480,16 +527,27 @@ type PuffCache = { c: Cvs; half: number; r: number };
 const puffCache = new Map<string, PuffCache>();
 
 /** Head sprites for each style, as cached layers. */
-type Layer = 'dandelion' | 'rainbow' | 'bubble-sheen' | 'bubble-hi' | 'balloon' | 'cloud';
+type Layer = 'dandelion' | 'rainbow' | 'bubble-sheen' | 'bubble-hi' | 'balloon' | 'cloud'
+  | 'snow-glow' | 'snowflake' | 'bauble' | 'star-glow' | 'star' | 'star-worried' | 'slime' | 'slime-worried'
+  | 'ghost' | 'ghost-worried' | 'ghost-arm' | 'present-box' | 'present-lid';
+
+/** How many seeded looks a layer has (limited so the cache stays small). */
+function layerVariety(layer: Layer): number {
+  switch (layer) {
+    case 'dandelion': return 64;
+    case 'rainbow': return 16;
+    case 'balloon': return BALLOON_COLS.length;
+    case 'snowflake': return SNOW_VARIANTS.length;
+    case 'bauble': return BAUBLE_COLS.length * 2;
+    case 'slime': case 'slime-worried': return SLIME_COLS.length;
+    case 'present-box': case 'present-lid': return PRESENT_WRAPS.length;
+    default: return 1;
+  }
+}
 
 function getPuffCache(seed: number, radius: number, layer: Layer = 'dandelion'): PuffCache {
   const bucket = Math.max(12, Math.round(radius / 6) * 6);
-  // limit variety so the cache stays small
-  const sd =
-    layer === 'dandelion' ? (seed | 0) % 64
-      : layer === 'rainbow' ? (seed | 0) % 16
-        : layer === 'balloon' ? (seed | 0) % BALLOON_COLS.length
-          : 0;
+  const sd = pick(seed, layerVariety(layer));
   const key = layer === 'dandelion' ? sd + ':' + bucket : layer + ':' + sd + ':' + bucket;
   let e = puffCache.get(key);
   if (e) return e;
@@ -505,6 +563,19 @@ function getPuffCache(seed: number, radius: number, layer: Layer = 'dandelion'):
     case 'bubble-hi': renderBubbleHighlight(g, bucket); break;
     case 'balloon': renderBalloon(g, bucket, BALLOON_COLS[sd]); break;
     case 'cloud': renderCloud(g, bucket); break;
+    case 'snow-glow': renderSnowGlow(g, bucket); break;
+    case 'snowflake': renderSnowflake(g, bucket, SNOW_VARIANTS[sd]); break;
+    case 'bauble': renderBauble(g, bucket, BAUBLE_COLS[sd % BAUBLE_COLS.length], Math.floor(sd / BAUBLE_COLS.length)); break;
+    case 'star-glow': renderStarGlow(g, bucket); break;
+    case 'star': renderStar(g, bucket, false); break;
+    case 'star-worried': renderStar(g, bucket, true); break;
+    case 'slime': renderSlime(g, bucket, SLIME_COLS[sd], false); break;
+    case 'slime-worried': renderSlime(g, bucket, SLIME_COLS[sd], true); break;
+    case 'ghost': renderGhost(g, bucket, false); break;
+    case 'ghost-worried': renderGhost(g, bucket, true); break;
+    case 'ghost-arm': renderGhostArm(g, bucket, 1); break;
+    case 'present-box': renderPresentBox(g, bucket, PRESENT_WRAPS[sd]); break;
+    case 'present-lid': renderPresentLid(g, bucket, PRESENT_WRAPS[sd]); break;
   }
   e = { c, half, r: bucket };
   puffCache.set(key, e);
@@ -844,6 +915,714 @@ function renderCloud(g: Ctx, r: number): void {
   g.stroke();
 }
 
+/** A '#rrggbb' colour with some alpha. */
+function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** How a cute face's mouth looks: a smile, a happy open mouth, or a little worried 'o' (with raised brows). */
+type Mouth = 'smile' | 'open' | 'o';
+/** A soft round face: shiny eyes, rosy cheeks and a mouth. */
+function drawCuteFace(g: Ctx, r: number, cx: number, cy: number, spread: number, scale: number, mouth: Mouth, cheek = 'rgba(255,143,166,0.55)'): void {
+  const s = r * scale;
+  g.fillStyle = cheek;
+  g.beginPath();
+  g.ellipse(cx - spread * 1.75, cy + s * 0.2, s * 0.13, s * 0.08, 0, 0, TAU);
+  g.ellipse(cx + spread * 1.75, cy + s * 0.2, s * 0.13, s * 0.08, 0, 0, TAU);
+  g.fill();
+  g.fillStyle = INK;
+  g.beginPath();
+  g.ellipse(cx - spread, cy, s * 0.09, s * 0.115, 0, 0, TAU);
+  g.ellipse(cx + spread, cy, s * 0.09, s * 0.115, 0, 0, TAU);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.beginPath();
+  for (const ex of [cx - spread, cx + spread]) {
+    g.moveTo(ex - s * 0.025 + s * 0.04, cy - s * 0.04);
+    g.arc(ex - s * 0.025, cy - s * 0.04, s * 0.04, 0, TAU);
+    g.moveTo(ex + s * 0.035 + s * 0.018, cy + s * 0.045);
+    g.arc(ex + s * 0.035, cy + s * 0.045, s * 0.018, 0, TAU);
+  }
+  g.fill();
+  const my = cy + s * 0.13;
+  if (mouth === 'o') {
+    // worried, not scared: brows lifted in the middle and a small round mouth
+    g.strokeStyle = INK;
+    g.lineCap = 'round';
+    g.lineWidth = Math.max(1, s * 0.035);
+    g.beginPath();
+    for (const side of [-1, 1]) {
+      const ex = cx + side * spread;
+      g.moveTo(ex + side * s * 0.1, cy - s * 0.17);
+      g.quadraticCurveTo(ex, cy - s * 0.22, ex - side * s * 0.07, cy - s * 0.25);
+    }
+    g.stroke();
+    g.fillStyle = '#7a3b5a';
+    g.beginPath();
+    g.ellipse(cx, my + s * 0.03, s * 0.05, s * 0.06, 0, 0, TAU);
+    g.fill();
+    return;
+  }
+  if (mouth === 'open') {
+    g.fillStyle = '#7a3b5a';
+    g.beginPath();
+    g.moveTo(cx - s * 0.11, my);
+    g.quadraticCurveTo(cx, my + s * 0.02, cx + s * 0.11, my);
+    g.quadraticCurveTo(cx + s * 0.1, my + s * 0.16, cx, my + s * 0.16);
+    g.quadraticCurveTo(cx - s * 0.1, my + s * 0.16, cx - s * 0.11, my);
+    g.fill();
+    g.fillStyle = '#ff8fa6';
+    g.beginPath();
+    g.ellipse(cx, my + s * 0.12, s * 0.055, s * 0.035, 0, 0, TAU);
+    g.fill();
+  } else {
+    g.strokeStyle = INK;
+    g.lineWidth = Math.max(1.1, s * 0.04);
+    g.lineCap = 'round';
+    g.beginPath();
+    g.arc(cx, my - s * 0.04, s * 0.09, 0.2 * Math.PI, 0.8 * Math.PI);
+    g.stroke();
+  }
+}
+
+// ---- snowflake: a slowly turning crystal over a soft glow
+type SnowVariant = { br: readonly (readonly [number, number])[]; ring: number; tip: 0 | 1 | 2 };
+/** Branches as [where along the arm, length]; an optional hexagon ring; arm tips (0 plain, 1 dot, 2 diamond). */
+const SNOW_VARIANTS: readonly SnowVariant[] = [
+  { br: [[0.42, 0.3], [0.68, 0.2]], ring: 0, tip: 1 },
+  { br: [[0.55, 0.32]], ring: 0.32, tip: 2 },
+  { br: [[0.36, 0.2], [0.58, 0.26], [0.8, 0.14]], ring: 0, tip: 0 },
+  { br: [[0.62, 0.28]], ring: 0.4, tip: 1 },
+];
+function renderSnowGlow(g: Ctx, r: number): void {
+  const gl = g.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 1.2);
+  gl.addColorStop(0, 'rgba(240,250,255,0.85)');
+  gl.addColorStop(0.45, 'rgba(214,236,255,0.5)');
+  gl.addColorStop(1, 'rgba(214,236,255,0)');
+  g.fillStyle = gl;
+  g.beginPath();
+  g.arc(0, 0, r * 1.2, 0, TAU);
+  g.fill();
+}
+function renderSnowflake(g: Ctx, r: number, v: SnowVariant): void {
+  const R = r * 0.94;
+  const w = Math.max(1.8, r * 0.11);
+  const ow = Math.max(1, r * 0.035);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const armAngle = (k: number) => (k * TAU) / 6 - Math.PI / 2;
+  const arms = () => {
+    g.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const a = armAngle(k);
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      g.moveTo(0, 0);
+      g.lineTo(ca * R * (v.tip === 2 ? 0.86 : 1), sa * R * (v.tip === 2 ? 0.86 : 1));
+      for (const [p, l] of v.br) {
+        for (const s of [-1, 1]) {
+          const ba = a + s * 0.95;
+          g.moveTo(ca * R * p, sa * R * p);
+          g.lineTo(ca * R * p + Math.cos(ba) * R * l, sa * R * p + Math.sin(ba) * R * l);
+        }
+      }
+    }
+    if (v.ring) {
+      for (let k = 0; k <= 6; k++) {
+        const a = armAngle(k) + Math.PI / 6;
+        const rr = R * v.ring * 0.9;
+        if (k === 0) g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        else g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+    }
+  };
+  const tips = () => {
+    g.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const a = armAngle(k);
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      if (v.tip === 1) {
+        g.moveTo(ca * R + w * 0.95, sa * R);
+        g.arc(ca * R, sa * R, w * 0.95, 0, TAU);
+      } else if (v.tip === 2) {
+        const m = R * 0.9;
+        g.moveTo(ca * R * 0.74, sa * R * 0.74);
+        g.lineTo(ca * m - sa * w * 1.3, sa * m + ca * w * 1.3);
+        g.lineTo(ca * R * 1.04, sa * R * 1.04);
+        g.lineTo(ca * m + sa * w * 1.3, sa * m - ca * w * 1.3);
+        g.closePath();
+      }
+    }
+  };
+  // outline pass, then the frosty fill, then a bright core line
+  arms();
+  g.strokeStyle = SNOW_EDGE;
+  g.lineWidth = w + ow * 2;
+  g.stroke();
+  if (v.tip) {
+    tips();
+    g.lineWidth = ow * 2;
+    g.stroke();
+  }
+  arms();
+  g.strokeStyle = '#e3f3ff';
+  g.lineWidth = w;
+  g.stroke();
+  if (v.tip) {
+    tips();
+    g.fillStyle = '#e3f3ff';
+    g.fill();
+  }
+  arms();
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = w * 0.38;
+  g.stroke();
+  // hexagon hub
+  const hr = R * 0.24;
+  g.beginPath();
+  for (let k = 0; k < 6; k++) {
+    const a = armAngle(k);
+    if (k === 0) g.moveTo(Math.cos(a) * hr, Math.sin(a) * hr);
+    else g.lineTo(Math.cos(a) * hr, Math.sin(a) * hr);
+  }
+  g.closePath();
+  const hub = g.createRadialGradient(-hr * 0.3, -hr * 0.3, hr * 0.1, 0, 0, hr);
+  hub.addColorStop(0, '#ffffff');
+  hub.addColorStop(1, '#cfe6ff');
+  g.fillStyle = hub;
+  g.fill();
+  g.strokeStyle = SNOW_EDGE;
+  g.lineWidth = ow * 1.4;
+  g.stroke();
+  // a little six-point star in the middle
+  g.strokeStyle = '#a9c8ee';
+  g.lineWidth = Math.max(0.8, ow);
+  g.beginPath();
+  for (let k = 0; k < 3; k++) {
+    const a = armAngle(k);
+    g.moveTo(Math.cos(a) * hr * 0.55, Math.sin(a) * hr * 0.55);
+    g.lineTo(-Math.cos(a) * hr * 0.55, -Math.sin(a) * hr * 0.55);
+  }
+  g.stroke();
+}
+
+// ---- Christmas bauble
+function renderBauble(g: Ctx, r: number, col: Duo, pattern: number): void {
+  const [fill, edge] = col;
+  const cy = r * 0.1;
+  const R = r * 0.84;
+  const lw = Math.max(1.4, r * 0.045);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  // hanging loop and gold cap
+  const cw = r * 0.34;
+  const ch = r * 0.2;
+  const ctop = cy - R - ch * 0.5;
+  g.strokeStyle = '#c9971f';
+  g.lineWidth = Math.max(1.2, r * 0.05);
+  g.beginPath();
+  g.ellipse(0, ctop - r * 0.08, r * 0.09, r * 0.1, 0, 0, TAU);
+  g.stroke();
+  // sphere
+  g.beginPath();
+  g.arc(0, cy, R, 0, TAU);
+  const body = g.createRadialGradient(-R * 0.32, cy - R * 0.38, R * 0.05, 0, cy, R * 1.02);
+  body.addColorStop(0, mixHex(fill, '#ffffff', 0.65));
+  body.addColorStop(0.3, mixHex(fill, '#ffffff', 0.12));
+  body.addColorStop(0.75, fill);
+  body.addColorStop(1, mixHex(fill, edge, 0.75));
+  g.fillStyle = body;
+  g.fill();
+  // painted band, curving round the ball
+  g.save();
+  g.beginPath();
+  g.arc(0, cy, R, 0, TAU);
+  g.clip();
+  const gold = fill === '#ffcf4a';
+  // the gold bauble has a white band, so its pattern uses the darker gold to stand out
+  const patCol = gold ? edge : fill;
+  const bandCol = gold ? '#ffffff' : '#ffe08a';
+  const bandEdge = gold ? '#e0c690' : '#d9a92e';
+  const by = cy - R * 0.08;
+  const h = R * 0.15;
+  const ry = R * 0.3;
+  g.beginPath();
+  g.ellipse(0, by - h, R * 1.02, ry, 0, Math.PI, 0, true);
+  g.lineTo(R * 1.02, by + h);
+  g.ellipse(0, by + h, R * 1.02, ry, 0, 0, Math.PI, false);
+  g.closePath();
+  g.fillStyle = bandCol;
+  g.fill();
+  g.strokeStyle = bandEdge;
+  g.lineWidth = Math.max(0.8, r * 0.025);
+  g.stroke();
+  const onBand = (th: number, dy: number): [number, number] => [Math.cos(th) * R, by + dy + Math.sin(th) * ry];
+  if (pattern === 0) {
+    // dots in the bauble's own colour
+    g.fillStyle = patCol;
+    g.beginPath();
+    for (let i = 1; i < 8; i++) {
+      const th = Math.PI - (i / 8) * Math.PI;
+      const [px, py] = onBand(th, 0);
+      const rr = h * 0.55 * (0.55 + 0.45 * Math.sin(th));
+      g.moveTo(px + rr, py);
+      g.arc(px, py, rr, 0, TAU);
+    }
+    g.fill();
+  } else {
+    // a zigzag
+    g.strokeStyle = patCol;
+    g.lineWidth = Math.max(1, r * 0.04);
+    g.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const th = Math.PI - (i / 12) * Math.PI;
+      const [px, py] = onBand(th, (i % 2 ? 1 : -1) * h * 0.55);
+      if (i === 0) g.moveTo(px, py);
+      else g.lineTo(px, py);
+    }
+    g.stroke();
+  }
+  // shade the edges so it reads as round
+  const sh = g.createRadialGradient(-R * 0.25, cy - R * 0.3, R * 0.3, 0, cy, R);
+  sh.addColorStop(0, 'rgba(255,255,255,0)');
+  sh.addColorStop(0.7, 'rgba(60,30,80,0)');
+  sh.addColorStop(1, 'rgba(60,30,80,0.22)');
+  g.fillStyle = sh;
+  g.fillRect(-R, cy - R, R * 2, R * 2);
+  g.restore();
+  g.beginPath();
+  g.arc(0, cy, R, 0, TAU);
+  g.strokeStyle = edge;
+  g.lineWidth = lw;
+  g.stroke();
+  // shine
+  g.save();
+  g.translate(-R * 0.4, cy - R * 0.42);
+  g.rotate(0.75);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.beginPath();
+  g.ellipse(0, 0, R * 0.12, R * 0.24, 0, 0, TAU);
+  g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.8)';
+  g.beginPath();
+  g.arc(-R * 0.66, cy - R * 0.02, R * 0.05, 0, TAU);
+  g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.35)';
+  g.lineWidth = R * 0.06;
+  g.beginPath();
+  g.arc(0, cy, R * 0.8, 0.25, 1.05);
+  g.stroke();
+  // cap on top
+  const capG = g.createLinearGradient(-cw / 2, 0, cw / 2, 0);
+  capG.addColorStop(0, '#c9971f');
+  capG.addColorStop(0.35, '#fff1a8');
+  capG.addColorStop(0.7, '#e7b53a');
+  capG.addColorStop(1, '#b8862a');
+  g.fillStyle = capG;
+  g.beginPath();
+  g.roundRect(-cw / 2, ctop, cw, ch, r * 0.04);
+  g.fill();
+  g.strokeStyle = '#9c6f1c';
+  g.lineWidth = Math.max(1, r * 0.03);
+  g.stroke();
+  g.strokeStyle = 'rgba(156,111,28,0.55)';
+  g.beginPath();
+  for (const fx of [-0.25, 0, 0.25]) {
+    g.moveTo(cw * fx, ctop + ch * 0.25);
+    g.lineTo(cw * fx, ctop + ch * 0.8);
+  }
+  g.stroke();
+}
+
+// ---- wishing star
+const STAR_CY = 0.1;
+function starPath(g: Ctx, r: number, scale = 1): void {
+  const cy = r * STAR_CY;
+  const ro = r * 1.09 * scale;
+  const ri = r * 0.61 * scale;
+  const cr = r * 0.22 * scale;
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? ri : ro;
+    pts.push([Math.cos(a) * rr, cy + Math.sin(a) * rr]);
+  }
+  g.beginPath();
+  g.moveTo((pts[9][0] + pts[0][0]) / 2, (pts[9][1] + pts[0][1]) / 2);
+  for (let i = 0; i < 10; i++) {
+    const p = pts[i];
+    const n = pts[(i + 1) % 10];
+    g.arcTo(p[0], p[1], (p[0] + n[0]) / 2, (p[1] + n[1]) / 2, i % 2 ? cr * 0.7 : cr);
+  }
+  g.closePath();
+}
+function renderStarGlow(g: Ctx, r: number): void {
+  const cy = r * STAR_CY;
+  const gl = g.createRadialGradient(0, cy, r * 0.2, 0, cy, r * 1.15);
+  gl.addColorStop(0, 'rgba(255,236,140,0.75)');
+  gl.addColorStop(0.5, 'rgba(255,224,110,0.4)');
+  gl.addColorStop(1, 'rgba(255,224,110,0)');
+  g.fillStyle = gl;
+  g.beginPath();
+  g.arc(0, cy, r * 1.15, 0, TAU);
+  g.fill();
+}
+function renderStar(g: Ctx, r: number, worried: boolean): void {
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  starPath(g, r);
+  const body = g.createRadialGradient(-r * 0.25, -r * 0.26, r * 0.05, 0, r * STAR_CY, r * 1.12);
+  body.addColorStop(0, '#fff8c8');
+  body.addColorStop(0.45, '#ffdc4e');
+  body.addColorStop(1, '#f7a928');
+  g.fillStyle = body;
+  g.fill();
+  g.strokeStyle = '#d48a1c';
+  g.lineWidth = Math.max(1.6, r * 0.06);
+  g.stroke();
+  // soft inner bevel
+  starPath(g, r, 0.8);
+  g.strokeStyle = 'rgba(255,250,220,0.6)';
+  g.lineWidth = Math.max(1, r * 0.04);
+  g.stroke();
+  // shine on the upper-left arm
+  g.save();
+  g.translate(-r * 0.33, -r * 0.2);
+  g.rotate(-0.6);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.beginPath();
+  g.ellipse(0, 0, r * 0.075, r * 0.18, 0, 0, TAU);
+  g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  g.beginPath();
+  g.arc(-r * 0.04, -r * 0.62, r * 0.05, 0, TAU);
+  g.fill();
+  drawCuteFace(g, r, 0, r * 0.16, r * 0.2, 1, worried ? 'o' : 'smile');
+}
+
+// ---- jelly slime
+const SLIME_BASE = 0.74;
+function slimePath(g: Ctx, r: number): void {
+  const b = r * SLIME_BASE;
+  g.beginPath();
+  g.moveTo(-r * 0.92, r * 0.5);
+  g.bezierCurveTo(-r * 0.98, -r * 0.22, -r * 0.6, -r * 0.8, 0, -r * 0.8);
+  g.bezierCurveTo(r * 0.6, -r * 0.8, r * 0.98, -r * 0.22, r * 0.92, r * 0.5);
+  // gooey feet that spread out a little, and a soft dip between them
+  g.quadraticCurveTo(r * 0.93, r * 0.65, r * 0.99, r * 0.68);
+  g.quadraticCurveTo(r * 1.05, b, r * 0.88, b);
+  g.quadraticCurveTo(r * 0.45, b + r * 0.02, 0, b - r * 0.03);
+  g.quadraticCurveTo(-r * 0.45, b + r * 0.02, -r * 0.88, b);
+  g.quadraticCurveTo(-r * 1.05, b, -r * 0.99, r * 0.68);
+  g.quadraticCurveTo(-r * 0.93, r * 0.65, -r * 0.92, r * 0.5);
+  g.closePath();
+}
+function renderSlime(g: Ctx, r: number, col: Duo, worried: boolean): void {
+  const [fill, edge] = col;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  slimePath(g, r);
+  const body = g.createRadialGradient(-r * 0.25, -r * 0.35, r * 0.05, 0, 0, r * 1.05);
+  body.addColorStop(0, rgba(mixHex(fill, '#ffffff', 0.6), 0.93));
+  body.addColorStop(0.5, rgba(fill, 0.9));
+  body.addColorStop(1, rgba(mixHex(fill, edge, 0.28), 0.93));
+  g.fillStyle = body;
+  g.fill();
+  g.save();
+  g.clip();
+  // a lighter glow in the jelly's belly, and a few tiny bubbles inside
+  g.fillStyle = 'rgba(255,255,255,0.22)';
+  g.beginPath();
+  g.ellipse(0, r * 0.62, r * 0.6, r * 0.16, 0, 0, TAU);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.45)';
+  g.beginPath();
+  for (const [bx, by, br] of [[0.55, 0.38, 0.06], [0.66, 0.2, 0.035], [-0.6, 0.42, 0.045], [0.42, -0.42, 0.03]]) {
+    g.moveTo((bx + br) * r, by * r);
+    g.arc(bx * r, by * r, br * r, 0, TAU);
+  }
+  g.fill();
+  g.restore();
+  slimePath(g, r);
+  g.strokeStyle = edge;
+  g.lineWidth = Math.max(1.4, r * 0.05);
+  g.stroke();
+  // shine: a big curved gleam and a dot
+  g.save();
+  g.translate(-r * 0.46, -r * 0.4);
+  g.rotate(0.85);
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.beginPath();
+  g.ellipse(0, 0, r * 0.09, r * 0.22, 0, 0, TAU);
+  g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.beginPath();
+  g.arc(-r * 0.12, -r * 0.62, r * 0.05, 0, TAU);
+  g.fill();
+  // cheeks a little lighter and stronger, so they stay pink on any jelly colour
+  drawCuteFace(g, r, 0, r * 0.06, r * 0.27, 1.1, worried ? 'o' : 'open', 'rgba(255,170,195,0.85)');
+  if (worried) {
+    // a little sweat drop by its head
+    g.save();
+    g.translate(r * 0.6, -r * 0.42);
+    g.rotate(0.35);
+    g.beginPath();
+    g.moveTo(0, -r * 0.13);
+    g.bezierCurveTo(r * 0.03, -r * 0.06, r * 0.08, -r * 0.01, r * 0.08, r * 0.04);
+    g.arc(0, r * 0.04, r * 0.08, 0, Math.PI);
+    g.bezierCurveTo(-r * 0.08, -r * 0.01, -r * 0.03, -r * 0.06, 0, -r * 0.13);
+    g.closePath();
+    g.fillStyle = '#dff3ff';
+    g.fill();
+    g.strokeStyle = '#6fb0e6';
+    g.lineWidth = Math.max(1, r * 0.03);
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.arc(-r * 0.025, r * 0.03, r * 0.022, 0, TAU);
+    g.fill();
+    g.restore();
+  }
+}
+
+// ---- friendly ghost
+function ghostPath(g: Ctx, r: number): void {
+  const top = -r * 0.95;
+  const hy = r * 0.64;
+  const amp = r * 0.09;
+  const xL = -r * 0.8;
+  const xR = r * 0.8;
+  g.beginPath();
+  g.moveTo(xL, hy + amp);
+  g.bezierCurveTo(-r * 0.86, r * 0.05, -r * 0.84, top, 0, top);
+  g.bezierCurveTo(r * 0.84, top, r * 0.86, r * 0.05, xR, hy + amp);
+  const n = 6;
+  const step = (xR - xL) / n;
+  let px = xR;
+  let py = hy + amp;
+  for (let i = 1; i <= n; i++) {
+    const nx = xR - step * i;
+    const ny = i % 2 ? hy - amp : hy + amp;
+    g.bezierCurveTo(px - step * 0.5, py, nx + step * 0.5, ny, nx, ny);
+    px = nx;
+    py = ny;
+  }
+  g.closePath();
+}
+/** Where the ghost's right arm joins the sheet (it waves about this point). */
+const GHOST_SHOULDER: readonly [number, number] = [0.66, 0.08];
+/** A little mitten arm poking out, down and outward from the sheet (side -1 left, 1 right). */
+function renderGhostArm(g: Ctx, r: number, side: number): void {
+  const lw = Math.max(1.4, r * 0.05);
+  const w = r * 0.22;
+  const [sx, sy] = GHOST_SHOULDER;
+  const x0 = side * sx * r;
+  const y0 = sy * r;
+  const x1 = side * r * 0.98;
+  const y1 = r * 0.3;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const [col, width] of [[GHOST_EDGE, w + lw * 2], ['#fbf9ff', w]] as const) {
+    g.strokeStyle = col;
+    g.lineWidth = width;
+    g.beginPath();
+    g.moveTo(x0, y0);
+    g.lineTo(x1, y1);
+    g.stroke();
+  }
+  // a soft shadow under the mitten
+  g.strokeStyle = 'rgba(169,156,214,0.35)';
+  g.lineWidth = Math.max(1, r * 0.04);
+  g.beginPath();
+  g.arc(x1, y1, w * 0.32, side > 0 ? 0.1 : Math.PI * 0.45, side > 0 ? Math.PI * 0.55 : Math.PI * 0.9);
+  g.stroke();
+}
+function renderGhost(g: Ctx, r: number, worried: boolean): void {
+  const lw = Math.max(1.4, r * 0.05);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  // the left arm is baked in; the right one waves on its own layer
+  renderGhostArm(g, r, -1);
+  ghostPath(g, r);
+  const body = g.createLinearGradient(0, -r * 0.95, 0, r * 0.75);
+  body.addColorStop(0, '#ffffff');
+  body.addColorStop(0.6, '#f8f5ff');
+  body.addColorStop(1, '#e6e0fa');
+  g.fillStyle = body;
+  g.fill();
+  g.save();
+  g.clip();
+  // soft lilac shade down the right side
+  const sh = g.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.3, -r * 0.1, -r * 0.1, r * 1.2);
+  sh.addColorStop(0, 'rgba(200,190,240,0)');
+  sh.addColorStop(0.7, 'rgba(200,190,240,0)');
+  sh.addColorStop(1, 'rgba(180,168,230,0.4)');
+  g.fillStyle = sh;
+  g.fillRect(-r, -r, r * 2, r * 2);
+  g.restore();
+  ghostPath(g, r);
+  g.strokeStyle = GHOST_EDGE;
+  g.lineWidth = lw;
+  g.stroke();
+  // shine on the top of the head
+  g.fillStyle = 'rgba(255,255,255,0.95)';
+  g.beginPath();
+  g.ellipse(-r * 0.38, -r * 0.6, r * 0.1, r * 0.06, -0.7, 0, TAU);
+  g.fill();
+  drawCuteFace(g, r, 0, -r * 0.2, r * 0.25, 1.05, worried ? 'o' : 'smile');
+}
+
+// ---- wrapped present: the box and the lid (with its bow) are separate so the lid can hop
+const BOX_TOP = -0.26;
+const BOX_BOTTOM = 0.8;
+const LID_TOP = -0.5;
+const LID_BOTTOM = -0.22;
+function paperFill(g: Ctx, r: number, w: Wrap, x0: number, x1: number): void {
+  const [paper, edge] = w.paper;
+  const pg = g.createLinearGradient(x0, 0, x1, 0);
+  pg.addColorStop(0, mixHex(paper, '#ffffff', 0.25));
+  pg.addColorStop(0.55, paper);
+  pg.addColorStop(1, mixHex(paper, edge, 0.45));
+  g.fillStyle = pg;
+  g.fill();
+  // pattern (clipped to the current path)
+  g.save();
+  g.clip();
+  const pc = mixHex(paper, '#ffffff', 0.55);
+  if (w.dots) {
+    g.fillStyle = pc;
+    g.beginPath();
+    const sp = r * 0.3;
+    for (let row = 0, yy = -r; yy < r; row++, yy += sp * 0.8) {
+      for (let xx = -r + (row % 2) * sp * 0.5; xx < r; xx += sp) {
+        g.moveTo(xx + r * 0.055, yy);
+        g.arc(xx, yy, r * 0.055, 0, TAU);
+      }
+    }
+    g.fill();
+  } else {
+    g.strokeStyle = pc;
+    g.lineWidth = r * 0.08;
+    g.beginPath();
+    for (let xx = -r * 2; xx < r * 2; xx += r * 0.28) {
+      g.moveTo(xx, -r);
+      g.lineTo(xx + r * 2, r);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+function ribbonFill(g: Ctx, w: Wrap, x0: number, x1: number): void {
+  const [rib, edge] = w.ribbon;
+  const rg = g.createLinearGradient(x0, 0, x1, 0);
+  rg.addColorStop(0, mixHex(rib, edge, 0.3));
+  rg.addColorStop(0.4, mixHex(rib, '#ffffff', 0.35));
+  rg.addColorStop(1, mixHex(rib, edge, 0.4));
+  g.fillStyle = rg;
+  g.fill();
+  g.strokeStyle = edge;
+  g.stroke();
+}
+function renderPresentBox(g: Ctx, r: number, w: Wrap): void {
+  const lw = Math.max(1.3, r * 0.045);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const x0 = -r * 0.66;
+  const y0 = r * BOX_TOP;
+  const y1 = r * BOX_BOTTOM;
+  g.beginPath();
+  g.roundRect(x0, y0, -x0 * 2, y1 - y0, r * 0.07);
+  paperFill(g, r, w, x0, -x0);
+  // ribbon down the front
+  const rw = r * 0.2;
+  g.lineWidth = Math.max(0.8, r * 0.025);
+  g.beginPath();
+  g.rect(-rw / 2, y0, rw, y1 - y0);
+  ribbonFill(g, w, -rw / 2, rw / 2);
+  // shadow under the lid
+  g.fillStyle = 'rgba(70,30,70,0.16)';
+  g.fillRect(x0 + lw / 2, y0, -x0 * 2 - lw, r * 0.1);
+  g.beginPath();
+  g.roundRect(x0, y0, -x0 * 2, y1 - y0, r * 0.07);
+  g.strokeStyle = w.paper[1];
+  g.lineWidth = lw;
+  g.stroke();
+}
+function renderPresentLid(g: Ctx, r: number, w: Wrap): void {
+  const lw = Math.max(1.3, r * 0.045);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const [rib, ribEdge] = w.ribbon;
+  const ky = r * (LID_TOP - 0.02);
+  // bow loops, sitting on top of the lid
+  g.lineWidth = Math.max(1.1, r * 0.035);
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(0, ky);
+    g.bezierCurveTo(s * r * 0.18, -r * 0.82, s * r * 0.62, -r * 1.02, s * r * 0.58, -r * 0.7);
+    g.bezierCurveTo(s * r * 0.56, -r * 0.5, s * r * 0.22, -r * 0.5, 0, ky);
+    g.closePath();
+    ribbonFill(g, w, s * r * 0.6, 0);
+    // fold inside the loop
+    g.strokeStyle = rgba(ribEdge, 0.7);
+    g.beginPath();
+    g.moveTo(s * r * 0.1, ky - r * 0.04);
+    g.quadraticCurveTo(s * r * 0.32, -r * 0.72, s * r * 0.46, -r * 0.72);
+    g.stroke();
+  }
+  // lid
+  const x0 = -r * 0.76;
+  const y0 = r * LID_TOP;
+  const y1 = r * LID_BOTTOM;
+  g.beginPath();
+  g.roundRect(x0, y0, -x0 * 2, y1 - y0, r * 0.06);
+  paperFill(g, r, w, x0, -x0);
+  g.beginPath();
+  g.roundRect(x0, y0, -x0 * 2, y1 - y0, r * 0.06);
+  g.strokeStyle = w.paper[1];
+  g.lineWidth = lw;
+  g.stroke();
+  // light along the lid's top edge
+  g.strokeStyle = 'rgba(255,255,255,0.5)';
+  g.lineWidth = Math.max(1, r * 0.03);
+  g.beginPath();
+  g.moveTo(x0 + r * 0.08, y0 + r * 0.05);
+  g.lineTo(-x0 - r * 0.08, y0 + r * 0.05);
+  g.stroke();
+  // ribbon over the lid
+  const rw = r * 0.22;
+  g.lineWidth = Math.max(0.8, r * 0.025);
+  g.beginPath();
+  g.rect(-rw / 2, y0, rw, y1 - y0);
+  ribbonFill(g, w, -rw / 2, rw / 2);
+  // ribbon tails and the knot
+  g.lineWidth = Math.max(1.1, r * 0.035);
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(s * r * 0.04, ky);
+    g.quadraticCurveTo(s * r * 0.2, -r * 0.36, s * r * 0.24, -r * 0.2);
+    g.lineTo(s * r * 0.15, -r * 0.24);
+    g.lineTo(s * r * 0.1, -r * 0.16);
+    g.quadraticCurveTo(s * r * 0.1, -r * 0.36, -s * r * 0.04, ky);
+    g.closePath();
+    ribbonFill(g, w, s * r * 0.24, 0);
+  }
+  g.beginPath();
+  g.ellipse(0, ky, r * 0.12, r * 0.1, 0, 0, TAU);
+  const kg = g.createRadialGradient(-r * 0.04, ky - r * 0.04, r * 0.01, 0, ky, r * 0.12);
+  kg.addColorStop(0, mixHex(rib, '#ffffff', 0.5));
+  kg.addColorStop(1, rib);
+  g.fillStyle = kg;
+  g.fill();
+  g.strokeStyle = ribEdge;
+  g.stroke();
+}
+
 function mixHex(a: string, b: string, t: number): string {
   const A = parseInt(a.slice(1), 16);
   const B = parseInt(b.slice(1), 16);
@@ -1008,9 +1787,148 @@ export function drawPuff(ctx: CanvasRenderingContext2D, o: PuffOpts): void {
     drawHeadImage(ctx, cache, r, sc, sc * (1 + Math.sin(t * 1.7 + ph + 1) * 0.01));
     ctx.restore();
     if (urg > 0.15) {
-      const col = PETALS[BALLOON_COLS[(seed | 0) % BALLOON_COLS.length]].fill;
+      const col = PETALS[BALLOON_COLS[pick(seed, BALLOON_COLS.length)]].fill;
       drawDriftingSparkles(ctx, x, y, r, t, seed, urg, col);
     }
+    return;
+  }
+
+  if (style === 'snowflake') {
+    const glow = getPuffCache(0, r, 'snow-glow');
+    const flake = getPuffCache(seed, r, 'snowflake');
+    ctx.save();
+    ctx.globalAlpha *= 0.7 + 0.3 * Math.sin(t * 2.1 + ph);
+    drawHeadImage(ctx, glow, r, breathe, breathe);
+    ctx.restore();
+    // slowly turning, one way or the other
+    ctx.rotate((pick(seed, 2) ? 1 : -1) * t * 0.3 + ph + wob);
+    ctx.save();
+    drawHeadImage(ctx, flake, r, breathe, breathe);
+    ctx.restore();
+    // a twinkle hopping from tip to tip
+    const tw = t * 0.8 + ph;
+    const k = Math.floor(tw);
+    const a = (pick(k, 6) * TAU) / 6 - Math.PI / 2;
+    const s = Math.sin((tw - k) * Math.PI);
+    drawSparkle(ctx, Math.cos(a) * r * 1.02, Math.sin(a) * r * 1.02, r * 0.42 * s, t * 2, '#ffffff', s);
+    ctx.restore();
+    if (urg > 0.15) drawDriftingDots(ctx, x, y, r, t, seed, urg, '#ffffff', SNOW_DOT_EDGE, true);
+    return;
+  }
+
+  if (style === 'bauble') {
+    const cache = getPuffCache(seed, r, 'bauble');
+    // swings from its loop like a pendulum
+    const swing = Math.sin(t * 1.6 + ph) * 0.09 + sway * 0.4 + wob;
+    ctx.translate(0, -r);
+    ctx.rotate(swing);
+    ctx.translate(0, r);
+    ctx.save();
+    drawHeadImage(ctx, cache, r, breathe, breathe);
+    ctx.restore();
+    // now and then a glint at the top end of the shine
+    const gp = (t * 0.6 + ph) % 2;
+    if (gp < 0.6) {
+      const s = Math.sin((gp / 0.6) * Math.PI);
+      drawSparkle(ctx, -r * 0.22, -r * 0.44, r * 0.32 * s, t, '#ffffff', s);
+    }
+    ctx.restore();
+    if (urg > 0.15) drawDriftingSparkles(ctx, x, y, r, t, seed, urg, BAUBLE_COLS[pick(seed, BAUBLE_COLS.length)][0], 1.25, 0.33, 1);
+    return;
+  }
+
+  if (style === 'star') {
+    const glow = getPuffCache(0, r, 'star-glow');
+    const star = getPuffCache(0, r, urg > WORRIED ? 'star-worried' : 'star');
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3 + ph);
+    ctx.save();
+    ctx.globalAlpha *= 0.55 + 0.45 * pulse;
+    drawHeadImage(ctx, glow, r, 1 + 0.08 * pulse, 1 + 0.08 * pulse);
+    ctx.restore();
+    ctx.rotate(Math.sin(t * 1.4 + ph) * 0.1 + wob);
+    ctx.save();
+    const sc = breathe * (1 + 0.03 * pulse);
+    drawHeadImage(ctx, star, r, sc, sc);
+    ctx.restore();
+    // two twinkles by the top points
+    for (let i = 0; i < 2; i++) {
+      const a = -Math.PI / 2 + (i ? 0.9 : -1.6);
+      const tw = 0.5 + 0.5 * Math.sin(t * 4 + i * 2.5 + ph);
+      drawSparkle(ctx, Math.cos(a) * r * 1.18, Math.sin(a) * r * 1.18, r * (0.18 + 0.2 * tw), t + i, i ? '#ffffff' : '#fff1a8', tw);
+    }
+    ctx.restore();
+    if (urg > 0.15) drawDriftingSparkles(ctx, x, y, r, t, seed, urg, '#ffd84a', 1.25, 0.33, 1);
+    return;
+  }
+
+  if (style === 'slime') {
+    const cache = getPuffCache(seed, r, urg > WORRIED ? 'slime-worried' : 'slime');
+    // squash and stretch, sitting on its flat bottom
+    const sq = Math.sin(t * 2.6 + ph) * 0.06 + wob * 0.5 + (urg > 0.15 ? Math.sin(t * 9 + ph) * 0.04 * urg : 0);
+    const base = r * SLIME_BASE;
+    ctx.rotate(sway * 0.3);
+    ctx.translate(0, base);
+    ctx.scale(breathe * (1 + sq), breathe * (1 - sq));
+    ctx.translate(0, -base);
+    drawHeadImage(ctx, cache, r, 1, 1);
+    ctx.restore();
+    if (urg > 0.15) {
+      const [fill, edge] = SLIME_COLS[pick(seed, SLIME_COLS.length)];
+      drawDriftingDots(ctx, x, y, r, t, seed, urg, mixHex(fill, '#ffffff', 0.45), edge, true);
+    }
+    return;
+  }
+
+  if (style === 'ghost') {
+    const body = getPuffCache(0, r, urg > WORRIED ? 'ghost-worried' : 'ghost');
+    const arm = getPuffCache(0, r, 'ghost-arm');
+    // bobs, and the hem swishes from side to side while one arm waves along
+    const swish = Math.sin(t * 1.5 + ph);
+    const bob = Math.sin(t * 2.2 + ph) * r * 0.05;
+    const lean = swish * 0.1 + wob;
+    ctx.translate(0, bob - r * 0.9);
+    ctx.transform(1, 0, lean, 1, 0, 0);
+    ctx.translate(0, r * 0.9);
+    ctx.scale(breathe, breathe);
+    const [sx, sy] = GHOST_SHOULDER;
+    ctx.save();
+    ctx.translate(sx * r, sy * r);
+    ctx.rotate(-0.15 - swish * 0.3);
+    ctx.translate(-sx * r, -sy * r);
+    drawHeadImage(ctx, arm, r, 1, 1);
+    ctx.restore();
+    drawHeadImage(ctx, body, r, 1, 1);
+    ctx.restore();
+    if (urg > 0.15) drawDriftingDots(ctx, x, y, r, t, seed, urg, '#ffffff', GHOST_EDGE, false);
+    return;
+  }
+
+  if (style === 'present') {
+    const box = getPuffCache(seed, r, 'present-box');
+    const lid = getPuffCache(seed, r, 'present-lid');
+    const wrap = PRESENT_WRAPS[pick(seed, PRESENT_WRAPS.length)];
+    // every so often the lid hops (more often when about to drift away)
+    const hopAt = (period: number) => {
+      const hp = (t + ph) % period;
+      return hp < 0.5 ? Math.sin((hp / 0.5) * Math.PI) : 0;
+    };
+    const hop = Math.max(hopAt(3.4), hopAt(1.2) * clamp01((urg - 0.15) / 0.2));
+    const bottom = r * BOX_BOTTOM;
+    ctx.translate(0, bottom);
+    ctx.rotate(sway * 0.5 + wob);
+    ctx.scale(breathe * (1 + hop * 0.04), breathe * (1 - hop * 0.04));
+    ctx.translate(0, -bottom);
+    ctx.save();
+    drawHeadImage(ctx, box, r, 1, 1);
+    ctx.restore();
+    if (hop > 0.05) drawSparkle(ctx, 0, r * (BOX_TOP - 0.06) - hop * r * 0.1, r * 0.55 * hop, t * 3, '#ffe066', hop);
+    const ly = r * (LID_TOP + LID_BOTTOM) / 2;
+    ctx.translate(0, ly - hop * r * 0.18);
+    ctx.rotate(hop * 0.14 * (pick(seed, 2) ? 1 : -1));
+    ctx.translate(0, -ly);
+    drawHeadImage(ctx, lid, r, 1, 1);
+    ctx.restore();
+    if (urg > 0.15) drawDriftingSparkles(ctx, x, y, r, t, seed, urg, wrap.ribbon[0], 1.25, 0.33, 1);
     return;
   }
 
@@ -1057,13 +1975,44 @@ function drawLooseSeeds(ctx: CanvasRenderingContext2D, x: number, y: number, r: 
   }
 }
 
-function drawDriftingSparkles(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, t: number, seed: number, urg: number, col: string): void {
+/** Little round drops leaving the puff from just outside its outline: rising, or falling (snow, slime) when `fall`. */
+function drawDriftingDots(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, t: number, seed: number, urg: number, fill: string, stroke: string, fall: boolean): void {
+  const n = Math.min(4, Math.ceil(urg * 4));
+  const a0 = ctx.globalAlpha;
+  ctx.save();
+  ctx.lineWidth = Math.max(1, r * 0.025);
+  for (let i = 0; i < n; i++) {
+    const p = (t * 0.45 + i * 0.29 + seed * 0.13) % 1;
+    // from the sides only, so they never cross the face or the word tag below
+    const base = fall ? -0.25 - (i >> 1) * 0.3 : 0.35 + (i >> 1) * 0.2;
+    const a = i % 2 ? Math.PI - base : base;
+    const d = r * (1.25 + p * 0.5);
+    const bx = x + Math.cos(a) * d + Math.sin(t * 3 + i) * r * 0.05;
+    const by = y + Math.sin(a) * d + (fall ? 1 : -1) * p * r * 0.6;
+    const br = r * (0.105 + 0.045 * (i % 2)) * (1 - p * 0.4);
+    ctx.globalAlpha = a0 * Math.sin(p * Math.PI) * 0.9;
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(bx - br * 0.35, by - br * 0.35, br * 0.3, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Sparkles drifting off an urgent puff, starting `from` radii out (squashed by `squash` vertically). */
+function drawDriftingSparkles(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, t: number, seed: number, urg: number, col: string, from = 0.95, size = 0.22, squash = 0.8): void {
   const n = Math.min(4, Math.ceil(urg * 4));
   for (let i = 0; i < n; i++) {
     const p = ((t * 0.5 + i * 0.31 + seed * 0.17) % 1);
     const a = -0.6 - i * 0.7 + seed;
-    const d = r * (0.95 + p * 0.7);
-    drawSparkle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.8 - p * r * 0.5, r * 0.22 * (1 - p * 0.4), t * 2 + i, i % 2 ? '#ffffff' : col, Math.sin(p * Math.PI) * 0.9);
+    const d = r * (from + p * 0.7);
+    drawSparkle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d * squash - p * r * 0.5, r * size * (1 - p * 0.4), t * 2 + i, i % 2 ? '#ffffff' : col, Math.sin(p * Math.PI) * 0.9);
   }
 }
 
