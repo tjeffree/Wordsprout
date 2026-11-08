@@ -106,15 +106,15 @@ test('growing flowers unlocks a hat for Bumble in the wardrobe', async ({ page }
   await expect(page.locator('.tier')).toHaveCount(5);
   // Back on the game menu, nothing is new any more.
   await page.keyboard.press('Escape');
-  await expect(page.locator('.wardrobe-btn')).toBeVisible();
-  await expect(page.locator('.wardrobe-btn .new-pill')).toHaveCount(0);
+  await expect(page.locator('.screen:not(.leaving) .wardrobe-btn')).toBeVisible();
+  await expect(page.locator('.screen:not(.leaving) .wardrobe-btn .new-pill')).toHaveCount(0);
   // The game went into the gardener's stats.
   await page.getByRole('button', { name: /my stats/i }).click();
   await expect(page.locator('.stat-tile', { hasText: 'game played' })).toContainText('1');
   await expect(page.locator('.stat-tile', { hasText: 'words typed' })).toContainText('10');
   await expect(page.locator('.stat-tile', { hasText: 'favourite game' })).toContainText('Ten Flowers');
   await page.keyboard.press('Escape');
-  await expect(page.locator('.wardrobe-btn')).toBeVisible();
+  await expect(page.locator('.screen:not(.leaving) .wardrobe-btn')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
